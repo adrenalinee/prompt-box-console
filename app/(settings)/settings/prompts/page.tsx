@@ -8,58 +8,94 @@ import {
     Loader,
     Menu,
     Modal,
+    Pagination,
     Select,
     Stack,
     Table,
     Text,
-    Textarea,
     TextInput,
+    Textarea,
 } from "@mantine/core";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {fetchWorkspaces} from "@/lib/api/workspaces";
-import {createPrompt, deletePrompt, fetchAllPrompts, updatePrompt} from "@/lib/api/prompts";
-import {queryKeys} from "@/lib/query/keys";
-import {useForm} from "@mantine/form";
-import {CodeHighlight} from "@mantine/code-highlight";
-import {IconDotsVertical} from "@tabler/icons-react";
+import { useForm } from "@mantine/form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { IconDotsVertical } from "@tabler/icons-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CodeHighlight } from "@mantine/code-highlight";
+import { fetchWorkspaces } from "@/lib/api/workspaces";
+import {
+    createPrompt,
+    deletePrompt,
+    fetchAllPromptsPage,
+    fetchPrompt,
+    updatePrompt,
+} from "@/lib/api/prompts";
+import { queryKeys } from "@/lib/query/keys";
 
 export default function SettingsPromptsPage() {
-    const [workspaceId, setWorkspaceId] = React.useState<string | null>(null);
-    const [search, setSearch] = React.useState("");
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const queryClient = useQueryClient();
+
     const [createOpen, setCreateOpen] = React.useState(false);
     const [editing, setEditing] = React.useState<{
         id: string;
         name?: string;
         description?: string;
     } | null>(null);
-    const [detail, setDetail] = React.useState<unknown | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name?: string } | null>(
         null,
     );
-    const queryClient = useQueryClient();
+
+    const workspaceId = searchParams.get("workspaceId") ?? "";
+    const nameFilter = searchParams.get("name") ?? "";
+    const page = Number(searchParams.get("page") || "1");
+    const size = Number(searchParams.get("size") || "20");
+    const sort = searchParams.get("sort") || "";
+    const detailId = searchParams.get("detail") || "";
+
+    const updateParam = React.useCallback(
+        (key: string, value?: string | null) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (!value) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+            if (key !== "page") {
+                params.set("page", "1");
+            }
+            router.replace(`${pathname}?${params.toString()}`);
+        },
+        [searchParams, router, pathname],
+    );
 
     const { data: workspaces = [], isLoading: workspaceLoading } = useQuery({
         queryKey: queryKeys.workspaces,
         queryFn: () => fetchWorkspaces(),
     });
 
-    const { data: prompts = [], isLoading } = useQuery({
-        queryKey: [...queryKeys.prompts(workspaceId || "all"), search],
+    const { data: pageData, isLoading } = useQuery({
+        queryKey: [...queryKeys.prompts(workspaceId || "all"), nameFilter, page, size, sort],
         queryFn: () =>
-            fetchAllPrompts({
-                workspaceId: workspaceId || undefined,
-                name: search || undefined,
-            }),
+            fetchAllPromptsPage(
+                {
+                    workspaceId: workspaceId || undefined,
+                    name: nameFilter || undefined,
+                },
+                page - 1,
+                size,
+                sort || undefined,
+            ),
     });
 
-    const filtered = prompts;
+    const { data: detail } = useQuery({
+        queryKey: detailId ? ["prompt", detailId] : [],
+        queryFn: () => fetchPrompt(detailId),
+        enabled: !!detailId,
+    });
 
-    const workspaceOptions = workspaces.map((workspace) => ({
-        value: workspace.id,
-        label: workspace.name,
-    }));
-
-    const createForm = useForm({
+    const form = useForm({
         initialValues: {
             name: "",
             description: "",
@@ -76,11 +112,11 @@ export default function SettingsPromptsPage() {
 
     const createMutation = useMutation({
         mutationFn: (values: { name: string; description?: string; instructions: string }) =>
-            createPrompt(workspaceId || "", values),
+            createPrompt(workspaceId, values),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.prompts(workspaceId || "all") });
             setCreateOpen(false);
-            createForm.reset();
+            form.reset();
         },
     });
 
@@ -100,6 +136,13 @@ export default function SettingsPromptsPage() {
         },
     });
 
+    const workspaceOptions = workspaces.map((workspace) => ({
+        value: workspace.id,
+        label: workspace.name,
+    }));
+
+    const items = pageData?.items ?? [];
+
     return (
         <Stack>
             <Group justify="space-between">
@@ -108,7 +151,7 @@ export default function SettingsPromptsPage() {
                 </Text>
                 <Button
                     onClick={() => {
-                        createForm.reset();
+                        form.reset();
                         setCreateOpen(true);
                     }}
                     disabled={!workspaceId}
@@ -121,59 +164,141 @@ export default function SettingsPromptsPage() {
                     label="Workspace"
                     placeholder="Workspace 선택"
                     data={workspaceOptions}
-                    value={workspaceId}
-                    onChange={setWorkspaceId}
+                    value={workspaceId || null}
+                    onChange={(value) => updateParam("workspaceId", value)}
                     disabled={workspaceLoading}
                     clearable
                 />
                 <TextInput
-                    label="검색"
+                    label="Name"
                     placeholder="Prompt 이름"
-                    value={search}
-                    onChange={(event) => setSearch(event.currentTarget.value)}
+                    value={nameFilter}
+                    onChange={(event) => updateParam("name", event.currentTarget.value || null)}
+                />
+                <Select
+                    label="Sort"
+                    data={[
+                        { value: "name,asc", label: "Name ↑" },
+                        { value: "name,desc", label: "Name ↓" },
+                        { value: "id,desc", label: "ID ↓" },
+                    ]}
+                    value={sort || null}
+                    onChange={(value) => updateParam("sort", value)}
+                    clearable
                 />
             </Group>
             {isLoading ? (
                 <Loader />
-            ) : filtered.length === 0 ? (
+            ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 Prompt가 없습니다.</Text>
             ) : (
-                <TableWrapper
-                    prompts={filtered}
-                    onDetail={setDetail}
-                    onEdit={(prompt) => {
-                        setEditing({
-                            id: prompt.id,
-                            name: prompt.name,
-                            description: prompt.description,
-                        });
-                        editForm.setValues({
-                            name: prompt.name ?? "",
-                            description: prompt.description ?? "",
-                        });
-                    }}
-                    onDelete={(promptId) => deleteMutation.mutate(promptId)}
-                    onRequestDelete={(prompt) => setDeleteTarget(prompt)}
-                />
+                <Table striped highlightOnHover withTableBorder>
+                    <Table.Thead>
+                        <Table.Tr>
+                            <Table.Th>Name</Table.Th>
+                            <Table.Th>Latest Ref ID</Table.Th>
+                            <Table.Th>Description</Table.Th>
+                            <Table.Th ta="right">Actions</Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {items.map((prompt) => (
+                            <Table.Tr key={prompt.id}>
+                                <Table.Td>{prompt.name}</Table.Td>
+                                <Table.Td>{prompt.latestRefId ?? "-"}</Table.Td>
+                                <Table.Td>{prompt.description ?? "-"}</Table.Td>
+                                <Table.Td ta="right">
+                                    <Group gap="xs" justify="flex-end">
+                                        <Button
+                                            size="xs"
+                                            variant="light"
+                                            onClick={() => updateParam("detail", prompt.id)}
+                                        >
+                                            상세
+                                        </Button>
+                                        <Menu shadow="md" position="bottom-end">
+                                            <Menu.Target>
+                                                <ActionIcon variant="light">
+                                                    <IconDotsVertical size={16} />
+                                                </ActionIcon>
+                                            </Menu.Target>
+                                            <Menu.Dropdown>
+                                                <Menu.Item
+                                                    onClick={() => {
+                                                        setEditing({
+                                                            id: prompt.id,
+                                                            name: prompt.name,
+                                                            description: prompt.description,
+                                                        });
+                                                        editForm.setValues({
+                                                            name: prompt.name ?? "",
+                                                            description: prompt.description ?? "",
+                                                        });
+                                                    }}
+                                                >
+                                                    수정
+                                                </Menu.Item>
+                                                <Menu.Item
+                                                    color="red"
+                                                    onClick={() =>
+                                                        setDeleteTarget({
+                                                            id: prompt.id,
+                                                            name: prompt.name,
+                                                        })
+                                                    }
+                                                >
+                                                    삭제
+                                                </Menu.Item>
+                                            </Menu.Dropdown>
+                                        </Menu>
+                                    </Group>
+                                </Table.Td>
+                            </Table.Tr>
+                        ))}
+                    </Table.Tbody>
+                </Table>
             )}
+
+            <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                    Total {pageData?.totalElements ?? 0}
+                </Text>
+                <Pagination
+                    total={pageData?.totalPages ?? 1}
+                    value={page}
+                    onChange={(value) => updateParam("page", String(value))}
+                />
+                <Select
+                    data={[
+                        { value: "10", label: "10 / page" },
+                        { value: "20", label: "20 / page" },
+                        { value: "50", label: "50 / page" },
+                    ]}
+                    value={String(size)}
+                    onChange={(value) => updateParam("size", value)}
+                />
+            </Group>
+
+            <Modal
+                opened={!!detailId}
+                onClose={() => updateParam("detail", null)}
+                title="Prompt 상세"
+                size="xl"
+            >
+                <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+            </Modal>
 
             <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Prompt 등록">
                 <form
-                    onSubmit={createForm.onSubmit((values) => {
-                        if (!workspaceId) {
-                            return;
-                        }
+                    onSubmit={form.onSubmit((values) => {
+                        if (!workspaceId) return;
                         createMutation.mutate(values);
                     })}
                 >
                     <Stack>
-                        <TextInput label="Name" required {...createForm.getInputProps("name")} />
-                        <TextInput label="Description" {...createForm.getInputProps("description")} />
-                        <Textarea
-                            label="Instructions"
-                            minRows={6}
-                            {...createForm.getInputProps("instructions")}
-                        />
+                        <TextInput label="Name" required {...form.getInputProps("name")} />
+                        <TextInput label="Description" {...form.getInputProps("description")} />
+                        <Textarea label="Instructions" minRows={6} {...form.getInputProps("instructions")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={createMutation.isPending}>
                                 등록
@@ -195,13 +320,6 @@ export default function SettingsPromptsPage() {
                         </Group>
                     </Stack>
                 </form>
-            </Modal>
-
-            <Modal opened={!!detail} onClose={() => setDetail(null)} title="Prompt 상세" size="xl">
-                <CodeHighlight
-                    code={detail ? JSON.stringify(detail, null, 2) : ""}
-                    language="json"
-                />
             </Modal>
 
             <Modal opened={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Prompt 삭제">
@@ -227,80 +345,5 @@ export default function SettingsPromptsPage() {
                 </Stack>
             </Modal>
         </Stack>
-    );
-}
-
-type PromptTableWrapperProps = {
-    prompts: {
-        id: string;
-        name: string;
-        description?: string;
-        latestRefId?: number;
-    }[];
-    onDetail: (prompt: unknown) => void;
-    onEdit: (prompt: { id: string; name?: string; description?: string }) => void;
-    onDelete: (promptId: string) => void;
-    onRequestDelete: (prompt: { id: string; name?: string }) => void;
-};
-
-function TableWrapper({
-    prompts,
-    onDetail,
-    onEdit,
-    onDelete,
-    onRequestDelete,
-}: PromptTableWrapperProps) {
-    if (!prompts) return null;
-    return (
-        <Table striped highlightOnHover withTableBorder>
-            <Table.Thead>
-                <Table.Tr>
-                    <Table.Th>Name</Table.Th>
-                    <Table.Th>Latest Ref ID</Table.Th>
-                    <Table.Th>Description</Table.Th>
-                    <Table.Th ta="right">Actions</Table.Th>
-                </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-                {prompts.map((prompt) => (
-                    <Table.Tr key={prompt.id}>
-                        <Table.Td>
-                            <Text>{prompt.name}</Text>
-                        </Table.Td>
-                        <Table.Td>{prompt.latestRefId ?? "-"}</Table.Td>
-                        <Table.Td>{prompt.description ?? "-"}</Table.Td>
-                        <Table.Td ta="right">
-                            <Group gap="xs" justify="flex-end">
-                                <Button size="xs" variant="light" onClick={() => onDetail(prompt)}>
-                                    상세
-                                </Button>
-                                <Menu shadow="md" position="bottom-end">
-                                    <Menu.Target>
-                                        <ActionIcon variant="light">
-                                            <IconDotsVertical size={16} />
-                                        </ActionIcon>
-                                    </Menu.Target>
-                                    <Menu.Dropdown>
-                                        <Menu.Item
-                                            onClick={() => onEdit(prompt)}
-                                        >
-                                            수정
-                                        </Menu.Item>
-                                        <Menu.Item
-                                            color="red"
-                                            onClick={() => {
-                                                onRequestDelete({ id: prompt.id, name: prompt.name });
-                                            }}
-                                        >
-                                            삭제
-                                        </Menu.Item>
-                                    </Menu.Dropdown>
-                                </Menu>
-                            </Group>
-                        </Table.Td>
-                    </Table.Tr>
-                ))}
-            </Table.Tbody>
-        </Table>
     );
 }

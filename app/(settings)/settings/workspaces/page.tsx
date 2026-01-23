@@ -1,25 +1,82 @@
 "use client";
 
 import React from "react";
-import {ActionIcon, Button, Group, Loader, Menu, Modal, Stack, Table, Text, TextInput,} from "@mantine/core";
-import {CodeHighlight} from "@mantine/code-highlight";
-import {IconDotsVertical} from "@tabler/icons-react";
-import {useForm} from "@mantine/form";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {createWorkspace, deleteWorkspace, fetchWorkspaces, updateWorkspace,} from "@/lib/api/workspaces";
-import {queryKeys} from "@/lib/query/keys";
+import {
+    ActionIcon,
+    Button,
+    Group,
+    Loader,
+    Menu,
+    Modal,
+    Pagination,
+    Select,
+    Stack,
+    Table,
+    Text,
+    TextInput,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { IconDotsVertical } from "@tabler/icons-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CodeHighlight } from "@mantine/code-highlight";
+import {
+    createWorkspace,
+    deleteWorkspace,
+    fetchWorkspace,
+    fetchWorkspacesPage,
+    updateWorkspace,
+} from "@/lib/api/workspaces";
+import { queryKeys } from "@/lib/query/keys";
 
 export default function WorkspacesPage() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const queryClient = useQueryClient();
-    const [modalOpen, setModalOpen] = React.useState(false);
-    const [editing, setEditing] = React.useState<{ id: string; name: string; description?: string } | null>(null);
-    const [search, setSearch] = React.useState("");
-    const [detail, setDetail] = React.useState<unknown | null>(null);
-    const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(null);
 
-    const { data: workspaces = [], isLoading } = useQuery({
-        queryKey: [...queryKeys.workspaces, search],
-        queryFn: () => fetchWorkspaces(0, 50, search || undefined),
+    const [modalOpen, setModalOpen] = React.useState(false);
+    const [editing, setEditing] = React.useState<{
+        id: string;
+        name: string;
+        description?: string;
+    } | null>(null);
+    const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(
+        null,
+    );
+
+    const nameFilter = searchParams.get("name") ?? "";
+    const page = Number(searchParams.get("page") || "1");
+    const size = Number(searchParams.get("size") || "20");
+    const sort = searchParams.get("sort") || "";
+    const detailId = searchParams.get("detail") || "";
+
+    const updateParam = React.useCallback(
+        (key: string, value?: string | null) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (!value) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+            if (key !== "page") {
+                params.set("page", "1");
+            }
+            router.replace(`${pathname}?${params.toString()}`);
+        },
+        [searchParams, router, pathname],
+    );
+
+    const { data: pageData, isLoading } = useQuery({
+        queryKey: [...queryKeys.workspaces, nameFilter, page, size, sort],
+        queryFn: () =>
+            fetchWorkspacesPage(page - 1, size, nameFilter || undefined, sort || undefined),
+    });
+
+    const { data: detail } = useQuery({
+        queryKey: detailId ? ["workspace", detailId] : [],
+        queryFn: () => fetchWorkspace(detailId),
+        enabled: !!detailId,
     });
 
     const form = useForm({
@@ -61,7 +118,7 @@ export default function WorkspacesPage() {
         },
     });
 
-    const filtered = workspaces;
+    const items = pageData?.items ?? [];
 
     return (
         <Stack>
@@ -78,16 +135,29 @@ export default function WorkspacesPage() {
                     새 Workspace
                 </Button>
             </Group>
-            <TextInput
-                label="Name"
-                placeholder="Workspace 이름"
-                value={search}
-                onChange={(event) => setSearch(event.currentTarget.value)}
-            />
+            <Group grow>
+                <TextInput
+                    label="Name"
+                    placeholder="Workspace 이름"
+                    value={nameFilter}
+                    onChange={(event) => updateParam("name", event.currentTarget.value || null)}
+                />
+                <Select
+                    label="Sort"
+                    data={[
+                        { value: "name,asc", label: "Name ↑" },
+                        { value: "name,desc", label: "Name ↓" },
+                        { value: "id,desc", label: "ID ↓" },
+                    ]}
+                    value={sort || null}
+                    onChange={(value) => updateParam("sort", value)}
+                    clearable
+                />
+            </Group>
 
             {isLoading ? (
                 <Loader />
-            ) : filtered.length === 0 ? (
+            ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 Workspace가 없습니다.</Text>
             ) : (
                 <Table striped highlightOnHover withTableBorder>
@@ -99,13 +169,17 @@ export default function WorkspacesPage() {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {filtered.map((workspace) => (
+                        {items.map((workspace) => (
                             <Table.Tr key={workspace.id}>
                                 <Table.Td>{workspace.name}</Table.Td>
                                 <Table.Td>{workspace.description ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
-                                        <Button size="xs" variant="light" onClick={() => setDetail(workspace)}>
+                                        <Button
+                                            size="xs"
+                                            variant="light"
+                                            onClick={() => updateParam("detail", workspace.id)}
+                                        >
                                             상세
                                         </Button>
                                         <Menu shadow="md" position="bottom-end">
@@ -114,30 +188,33 @@ export default function WorkspacesPage() {
                                                     <IconDotsVertical size={16} />
                                                 </ActionIcon>
                                             </Menu.Target>
-                                        <Menu.Dropdown>
-                                            <Menu.Item
-                                                onClick={() => {
-                                                    setEditing({
-                                                        id: workspace.id,
-                                                        name: workspace.name,
-                                                        description: workspace.description,
-                                                    });
-                                                    editForm.setValues({
-                                                        name: workspace.name,
-                                                        description: workspace.description ?? "",
-                                                    });
-                                                }}
-                                            >
-                                                수정
-                                            </Menu.Item>
-                                            <Menu.Item
-                                                color="red"
-                                                onClick={() => {
-                                                setDeleteTarget({ id: workspace.id, name: workspace.name });
-                                            }}
-                                        >
-                                            삭제
-                                        </Menu.Item>
+                                            <Menu.Dropdown>
+                                                <Menu.Item
+                                                    onClick={() => {
+                                                        setEditing({
+                                                            id: workspace.id,
+                                                            name: workspace.name,
+                                                            description: workspace.description,
+                                                        });
+                                                        editForm.setValues({
+                                                            name: workspace.name,
+                                                            description: workspace.description ?? "",
+                                                        });
+                                                    }}
+                                                >
+                                                    수정
+                                                </Menu.Item>
+                                                <Menu.Item
+                                                    color="red"
+                                                    onClick={() =>
+                                                        setDeleteTarget({
+                                                            id: workspace.id,
+                                                            name: workspace.name,
+                                                        })
+                                                    }
+                                                >
+                                                    삭제
+                                                </Menu.Item>
                                             </Menu.Dropdown>
                                         </Menu>
                                     </Group>
@@ -147,6 +224,35 @@ export default function WorkspacesPage() {
                     </Table.Tbody>
                 </Table>
             )}
+
+            <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                    Total {pageData?.totalElements ?? 0}
+                </Text>
+                <Pagination
+                    total={pageData?.totalPages ?? 1}
+                    value={page}
+                    onChange={(value) => updateParam("page", String(value))}
+                />
+                <Select
+                    data={[
+                        { value: "10", label: "10 / page" },
+                        { value: "20", label: "20 / page" },
+                        { value: "50", label: "50 / page" },
+                    ]}
+                    value={String(size)}
+                    onChange={(value) => updateParam("size", value)}
+                />
+            </Group>
+
+            <Modal
+                opened={!!detailId}
+                onClose={() => updateParam("detail", null)}
+                title="Workspace 상세"
+                size="xl"
+            >
+                <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+            </Modal>
 
             <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Workspace 등록">
                 <form onSubmit={form.onSubmit((values) => mutation.mutate(values))}>
@@ -163,11 +269,7 @@ export default function WorkspacesPage() {
             </Modal>
 
             <Modal opened={!!editing} onClose={() => setEditing(null)} title="Workspace 수정">
-                <form
-                    onSubmit={editForm.onSubmit((values) => {
-                        updateMutation.mutate(values);
-                    })}
-                >
+                <form onSubmit={editForm.onSubmit((values) => updateMutation.mutate(values))}>
                     <Stack>
                         <TextInput label="Name" required {...editForm.getInputProps("name")} />
                         <TextInput label="Description" {...editForm.getInputProps("description")} />
@@ -178,13 +280,6 @@ export default function WorkspacesPage() {
                         </Group>
                     </Stack>
                 </form>
-            </Modal>
-
-            <Modal opened={!!detail} onClose={() => setDetail(null)} title="Workspace 상세" size="xl">
-                <CodeHighlight
-                    code={detail ? JSON.stringify(detail, null, 2) : ""}
-                    language="json"
-                />
             </Modal>
 
             <Modal

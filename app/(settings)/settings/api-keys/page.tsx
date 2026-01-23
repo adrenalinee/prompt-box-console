@@ -1,27 +1,43 @@
 "use client";
 
 import React from "react";
-import {ActionIcon, Button, Group, Loader, Menu, Modal, Select, Stack, Table, Text, TextInput,} from "@mantine/core";
-import {useForm} from "@mantine/form";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {createApiKey, deleteApiKey, fetchApiKeys, fetchVendors, updateApiKey,} from "@/lib/api/settings";
-import {fetchWorkspaces} from "@/lib/api/workspaces";
-import {queryKeys} from "@/lib/query/keys";
-import {CodeHighlight} from "@mantine/code-highlight";
-import {IconDotsVertical} from "@tabler/icons-react";
-
-function maskKey(value?: string) {
-    if (!value) return "••••••";
-    if (value.length <= 8) return "••••••";
-    return `${value.slice(0, 4)}••••${value.slice(-4)}`;
-}
+import {
+    ActionIcon,
+    Button,
+    Group,
+    Loader,
+    Menu,
+    Modal,
+    Pagination,
+    Select,
+    Stack,
+    Table,
+    Text,
+    TextInput,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { IconDotsVertical } from "@tabler/icons-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CodeHighlight } from "@mantine/code-highlight";
+import {
+    createApiKey,
+    deleteApiKey,
+    fetchApiKey,
+    fetchApiKeysPage,
+    fetchVendors,
+    updateApiKey,
+} from "@/lib/api/settings";
+import { fetchWorkspaces } from "@/lib/api/workspaces";
+import { queryKeys } from "@/lib/query/keys";
 
 export default function SettingsApiKeysPage() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const queryClient = useQueryClient();
+
     const [modalOpen, setModalOpen] = React.useState(false);
-    const [workspaceId, setWorkspaceId] = React.useState<string | null>(null);
-    const [vendorId, setVendorId] = React.useState<string | null>(null);
-    const [nameFilter, setNameFilter] = React.useState("");
     const [editing, setEditing] = React.useState<{
         id: string;
         workspaceId?: string;
@@ -29,9 +45,32 @@ export default function SettingsApiKeysPage() {
         name?: string;
         description?: string;
     } | null>(null);
-    const [detail, setDetail] = React.useState<unknown | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name?: string } | null>(
         null,
+    );
+
+    const workspaceId = searchParams.get("workspaceId") ?? "";
+    const vendorId = searchParams.get("vendorId") ?? "";
+    const nameFilter = searchParams.get("name") ?? "";
+    const page = Number(searchParams.get("page") || "1");
+    const size = Number(searchParams.get("size") || "20");
+    const sort = searchParams.get("sort") || "";
+    const detailId = searchParams.get("detail") || "";
+
+    const updateParam = React.useCallback(
+        (key: string, value?: string | null) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (!value) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+            if (key !== "page") {
+                params.set("page", "1");
+            }
+            router.replace(`${pathname}?${params.toString()}`);
+        },
+        [searchParams, router, pathname],
     );
 
     const { data: workspaces = [], isLoading: workspaceLoading } = useQuery({
@@ -39,19 +78,30 @@ export default function SettingsApiKeysPage() {
         queryFn: () => fetchWorkspaces(),
     });
 
-    const { data: apiKeys = [], isLoading } = useQuery({
-        queryKey: [...queryKeys.apiKeys({ workspaceId, vendorId }), nameFilter],
-        queryFn: () =>
-            fetchApiKeys({
-                workspaceId: workspaceId || undefined,
-                vendorId: vendorId || undefined,
-                name: nameFilter || undefined,
-            }),
-    });
-
     const { data: vendors = [] } = useQuery({
         queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
+    });
+
+    const { data: pageData, isLoading } = useQuery({
+        queryKey: [...queryKeys.apiKeys({ workspaceId, vendorId }), nameFilter, page, size, sort],
+        queryFn: () =>
+            fetchApiKeysPage(
+                {
+                    workspaceId: workspaceId || undefined,
+                    vendorId: vendorId || undefined,
+                    name: nameFilter || undefined,
+                },
+                page - 1,
+                size,
+                sort || undefined,
+            ),
+    });
+
+    const { data: detail } = useQuery({
+        queryKey: detailId ? ["apiKey", detailId] : [],
+        queryFn: () => fetchApiKey(detailId),
+        enabled: !!detailId,
     });
 
     const form = useForm({
@@ -71,13 +121,11 @@ export default function SettingsApiKeysPage() {
             description?: string;
         }) =>
             createApiKey({
-                workspaceId: workspaceId || "",
+                workspaceId,
                 ...values,
             }),
         onSuccess: () => {
-            if (workspaceId) {
-                queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys({ workspaceId }) });
-            }
+            queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys({ workspaceId, vendorId }) });
             setModalOpen(false);
             form.reset();
         },
@@ -126,6 +174,8 @@ export default function SettingsApiKeysPage() {
 
     const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));
 
+    const items = pageData?.items ?? [];
+
     return (
         <Stack>
             <Group justify="space-between">
@@ -143,33 +193,46 @@ export default function SettingsApiKeysPage() {
                 </Button>
             </Group>
 
-            <Select
-                label="Workspace"
-                placeholder="Workspace 선택"
-                data={workspaceOptions}
-                value={workspaceId}
-                onChange={setWorkspaceId}
-                disabled={workspaceLoading}
-                clearable
-            />
-            <Select
-                label="Vendor"
-                placeholder="Vendor 선택"
-                data={vendorOptions}
-                value={vendorId}
-                onChange={setVendorId}
-                clearable
-            />
-            <TextInput
-                label="Name"
-                placeholder="API Key 이름"
-                value={nameFilter}
-                onChange={(event) => setNameFilter(event.currentTarget.value)}
-            />
+            <Group grow>
+                <Select
+                    label="Workspace"
+                    placeholder="Workspace 선택"
+                    data={workspaceOptions}
+                    value={workspaceId || null}
+                    onChange={(value) => updateParam("workspaceId", value)}
+                    disabled={workspaceLoading}
+                    clearable
+                />
+                <Select
+                    label="Vendor"
+                    placeholder="Vendor 선택"
+                    data={vendorOptions}
+                    value={vendorId || null}
+                    onChange={(value) => updateParam("vendorId", value)}
+                    clearable
+                />
+                <TextInput
+                    label="Name"
+                    placeholder="API Key 이름"
+                    value={nameFilter}
+                    onChange={(event) => updateParam("name", event.currentTarget.value || null)}
+                />
+                <Select
+                    label="Sort"
+                    data={[
+                        { value: "name,asc", label: "Name ↑" },
+                        { value: "name,desc", label: "Name ↓" },
+                        { value: "id,desc", label: "ID ↓" },
+                    ]}
+                    value={sort || null}
+                    onChange={(value) => updateParam("sort", value)}
+                    clearable
+                />
+            </Group>
 
             {isLoading ? (
                 <Loader />
-            ) : apiKeys.length === 0 ? (
+            ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 API Key가 없습니다.</Text>
             ) : (
                 <Table striped highlightOnHover withTableBorder>
@@ -178,24 +241,26 @@ export default function SettingsApiKeysPage() {
                             <Table.Th>Workspace</Table.Th>
                             <Table.Th>Vendor</Table.Th>
                             <Table.Th>Name</Table.Th>
-                            <Table.Th>Key</Table.Th>
                             <Table.Th>Description</Table.Th>
                             <Table.Th ta="right">Actions</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {apiKeys.map((apiKey) => (
+                        {items.map((apiKey) => (
                             <Table.Tr key={apiKey.id}>
                                 <Table.Td>{apiKey.workspaceId ?? "-"}</Table.Td>
                                 <Table.Td>
                                     {vendorMap.get(apiKey.vendorId) ?? apiKey.vendorId}
                                 </Table.Td>
                                 <Table.Td>{apiKey.name ?? "-"}</Table.Td>
-                                <Table.Td>{maskKey()}</Table.Td>
                                 <Table.Td>{apiKey.description ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
-                                        <Button size="xs" variant="light" onClick={() => setDetail(apiKey)}>
+                                        <Button
+                                            size="xs"
+                                            variant="light"
+                                            onClick={() => updateParam("detail", apiKey.id)}
+                                        >
                                             상세
                                         </Button>
                                         <Menu shadow="md" position="bottom-end">
@@ -204,38 +269,38 @@ export default function SettingsApiKeysPage() {
                                                     <IconDotsVertical size={16} />
                                                 </ActionIcon>
                                             </Menu.Target>
-                                        <Menu.Dropdown>
-                                            <Menu.Item
-                                                onClick={() => {
-                                                    setEditing({
-                                                        id: apiKey.id,
-                                                        workspaceId: apiKey.workspaceId,
-                                                        vendorId: apiKey.vendorId,
-                                                        name: apiKey.name,
-                                                        description: apiKey.description,
-                                                    });
-                                                    editForm.setValues({
-                                                        workspaceId: apiKey.workspaceId ?? "",
-                                                        vendorId: apiKey.vendorId,
-                                                        name: apiKey.name ?? "",
-                                                        value: "",
-                                                        description: apiKey.description ?? "",
-                                                    });
-                                                }}
-                                            >
-                                                수정
-                                            </Menu.Item>
-                                            <Menu.Item
-                                                color="red"
-                                                onClick={() => {
-                                                    setDeleteTarget({
-                                                        id: apiKey.id,
-                                                        name: apiKey.name,
-                                                    });
-                                                }}
-                                            >
-                                                삭제
-                                            </Menu.Item>
+                                            <Menu.Dropdown>
+                                                <Menu.Item
+                                                    onClick={() => {
+                                                        setEditing({
+                                                            id: apiKey.id,
+                                                            workspaceId: apiKey.workspaceId,
+                                                            vendorId: apiKey.vendorId,
+                                                            name: apiKey.name,
+                                                            description: apiKey.description,
+                                                        });
+                                                        editForm.setValues({
+                                                            workspaceId: apiKey.workspaceId ?? "",
+                                                            vendorId: apiKey.vendorId,
+                                                            name: apiKey.name ?? "",
+                                                            value: "",
+                                                            description: apiKey.description ?? "",
+                                                        });
+                                                    }}
+                                                >
+                                                    수정
+                                                </Menu.Item>
+                                                <Menu.Item
+                                                    color="red"
+                                                    onClick={() =>
+                                                        setDeleteTarget({
+                                                            id: apiKey.id,
+                                                            name: apiKey.name,
+                                                        })
+                                                    }
+                                                >
+                                                    삭제
+                                                </Menu.Item>
                                             </Menu.Dropdown>
                                         </Menu>
                                     </Group>
@@ -246,14 +311,42 @@ export default function SettingsApiKeysPage() {
                 </Table>
             )}
 
+            <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                    Total {pageData?.totalElements ?? 0}
+                </Text>
+                <Pagination
+                    total={pageData?.totalPages ?? 1}
+                    value={page}
+                    onChange={(value) => updateParam("page", String(value))}
+                />
+                <Select
+                    data={[
+                        { value: "10", label: "10 / page" },
+                        { value: "20", label: "20 / page" },
+                        { value: "50", label: "50 / page" },
+                    ]}
+                    value={String(size)}
+                    onChange={(value) => updateParam("size", value)}
+                />
+            </Group>
+
             <Modal
-                opened={modalOpen}
-                onClose={() => {
-                    setModalOpen(false);
-                }}
-                title="API Key 등록"
+                opened={!!detailId}
+                onClose={() => updateParam("detail", null)}
+                title="API Key 상세"
+                size="xl"
             >
-                <form onSubmit={form.onSubmit((values) => createMutation.mutate(values))}>
+                <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+            </Modal>
+
+            <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="API Key 등록">
+                <form
+                    onSubmit={form.onSubmit((values) => {
+                        if (!workspaceId) return;
+                        createMutation.mutate(values);
+                    })}
+                >
                     <Stack>
                         <Select
                             label="Vendor"
@@ -308,13 +401,6 @@ export default function SettingsApiKeysPage() {
                         </Group>
                     </Stack>
                 </form>
-            </Modal>
-
-            <Modal opened={!!detail} onClose={() => setDetail(null)} title="API Key 상세" size="xl">
-                <CodeHighlight
-                    code={detail ? JSON.stringify(detail, null, 2) : ""}
-                    language="json"
-                />
             </Modal>
 
             <Modal opened={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="API Key 삭제">

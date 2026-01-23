@@ -66,15 +66,25 @@ export async function deleteApiKey(apiKeyId: string) {
     });
 }
 
-export async function fetchVendors(page = 0, size = 50, name?: string) {
+export async function fetchVendors(page = 0, size = 50, name?: string, sort?: string) {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("size", String(size));
     if (name) params.set("name", name);
+    if (sort) params.set("sort", sort);
     const response = await apiFetch<PageResponse<Vendor>>(
         `/llm-vendors?${params.toString()}`,
     );
     return response.items;
+}
+
+export async function fetchVendorsPage(page = 0, size = 50, name?: string, sort?: string) {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (name) params.set("name", name);
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<Vendor>>(`/llm-vendors?${params.toString()}`);
 }
 
 export async function createVendor(payload: { name: string; description?: string }) {
@@ -122,6 +132,7 @@ export async function fetchApiKeys(
     filters: { workspaceId?: string; vendorId?: string; name?: string },
     page = 0,
     size = 50,
+    sort?: string,
 ) {
     const params = new URLSearchParams();
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
@@ -129,9 +140,26 @@ export async function fetchApiKeys(
     if (filters.name) params.set("name", filters.name);
     params.set("page", String(page));
     params.set("size", String(size));
+    if (sort) params.set("sort", sort);
 
     const response = await apiFetch<PageResponse<ApiKey>>(`/llm-api-keys?${params.toString()}`);
     return response.items;
+}
+
+export async function fetchApiKeysPage(
+    filters: { workspaceId?: string; vendorId?: string; name?: string },
+    page = 0,
+    size = 50,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
+    if (filters.vendorId) params.set("vendorId", filters.vendorId);
+    if (filters.name) params.set("name", filters.name);
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<ApiKey>>(`/llm-api-keys?${params.toString()}`);
 }
 
 export async function fetchModels(
@@ -139,15 +167,33 @@ export async function fetchModels(
     page = 0,
     size = 50,
     name?: string,
+    sort?: string,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
     if (name) params.set("name", name);
     params.set("page", String(page));
     params.set("size", String(size));
+    if (sort) params.set("sort", sort);
 
     const response = await apiFetch<PageResponse<Model>>(`/models?${params.toString()}`);
     return response.items;
+}
+
+export async function fetchModelsPage(
+    vendorId?: string,
+    page = 0,
+    size = 50,
+    name?: string,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    if (vendorId) params.set("vendorId", vendorId);
+    if (name) params.set("name", name);
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<Model>>(`/models?${params.toString()}`);
 }
 
 export async function fetchModel(modelId: number) {
@@ -184,12 +230,14 @@ export async function fetchWorkspaceModels(
     page = 0,
     size = 50,
     name?: string,
+    sort?: string,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
     if (name) params.set("name", name);
     params.set("page", String(page));
     params.set("size", String(size));
+    if (sort) params.set("sort", sort);
 
     const response = await apiFetch<PageResponse<Model>>(
         `/workspaces/${workspaceId}/models?${params.toString()}`,

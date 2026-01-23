@@ -36,15 +36,32 @@ export async function fetchAllPrompts(
     filters: { workspaceId?: string; name?: string },
     page = 0,
     size = 50,
+    sort?: string,
 ) {
     const params = new URLSearchParams();
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
     if (filters.name) params.set("name", filters.name);
     params.set("page", String(page));
     params.set("size", String(size));
+    if (sort) params.set("sort", sort);
 
     const response = await apiFetch<PageResponse<Prompt>>(`/prompts?${params.toString()}`);
     return response.items;
+}
+
+export async function fetchAllPromptsPage(
+    filters: { workspaceId?: string; name?: string },
+    page = 0,
+    size = 50,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
+    if (filters.name) params.set("name", filters.name);
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<Prompt>>(`/prompts?${params.toString()}`);
 }
 
 export async function createPrompt(

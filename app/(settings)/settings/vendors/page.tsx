@@ -1,25 +1,76 @@
 "use client";
 
 import React from "react";
-import {ActionIcon, Button, Group, Loader, Menu, Modal, Stack, Table, Text, TextInput,} from "@mantine/core";
-import {CodeHighlight} from "@mantine/code-highlight";
-import {IconDotsVertical} from "@tabler/icons-react";
-import {useForm} from "@mantine/form";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {createVendor, deleteVendor, fetchVendors, updateVendor} from "@/lib/api/settings";
-import {queryKeys} from "@/lib/query/keys";
+import {
+    ActionIcon,
+    Button,
+    Group,
+    Loader,
+    Menu,
+    Modal,
+    Pagination,
+    Select,
+    Stack,
+    Table,
+    Text,
+    TextInput,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { IconDotsVertical } from "@tabler/icons-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CodeHighlight } from "@mantine/code-highlight";
+import {
+    createVendor,
+    deleteVendor,
+    fetchVendor,
+    fetchVendorsPage,
+    updateVendor,
+} from "@/lib/api/settings";
+import { queryKeys } from "@/lib/query/keys";
 
 export default function VendorsPage() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const queryClient = useQueryClient();
+
     const [modalOpen, setModalOpen] = React.useState(false);
     const [editing, setEditing] = React.useState<{ id: string; name: string; description?: string } | null>(null);
-    const [search, setSearch] = React.useState("");
-    const [detail, setDetail] = React.useState<unknown | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(null);
 
-    const { data: vendors = [], isLoading } = useQuery({
-        queryKey: [...queryKeys.vendors, search],
-        queryFn: () => fetchVendors(0, 50, search || undefined),
+    const nameFilter = searchParams.get("name") ?? "";
+    const page = Number(searchParams.get("page") || "1");
+    const size = Number(searchParams.get("size") || "20");
+    const sort = searchParams.get("sort") || "";
+    const detailId = searchParams.get("detail") || "";
+
+    const updateParam = React.useCallback(
+        (key: string, value?: string | null) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (!value) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+            if (key !== "page") {
+                params.set("page", "1");
+            }
+            router.replace(`${pathname}?${params.toString()}`);
+        },
+        [searchParams, router, pathname],
+    );
+
+    const { data: pageData, isLoading } = useQuery({
+        queryKey: [...queryKeys.vendors, nameFilter, page, size, sort],
+        queryFn: () =>
+            fetchVendorsPage(page - 1, size, nameFilter || undefined, sort || undefined),
+    });
+
+    const { data: detail } = useQuery({
+        queryKey: detailId ? ["vendor", detailId] : [],
+        queryFn: () => fetchVendor(detailId),
+        enabled: !!detailId,
     });
 
     const form = useForm({
@@ -61,7 +112,7 @@ export default function VendorsPage() {
         },
     });
 
-    const filtered = vendors;
+    const items = pageData?.items ?? [];
 
     return (
         <Stack>
@@ -78,16 +129,29 @@ export default function VendorsPage() {
                     새 Vendor
                 </Button>
             </Group>
-            <TextInput
-                label="Name"
-                placeholder="Vendor 이름"
-                value={search}
-                onChange={(event) => setSearch(event.currentTarget.value)}
-            />
+            <Group grow>
+                <TextInput
+                    label="Name"
+                    placeholder="Vendor 이름"
+                    value={nameFilter}
+                    onChange={(event) => updateParam("name", event.currentTarget.value || null)}
+                />
+                <Select
+                    label="Sort"
+                    data={[
+                        { value: "name,asc", label: "Name ↑" },
+                        { value: "name,desc", label: "Name ↓" },
+                        { value: "id,desc", label: "ID ↓" },
+                    ]}
+                    value={sort || null}
+                    onChange={(value) => updateParam("sort", value)}
+                    clearable
+                />
+            </Group>
 
             {isLoading ? (
                 <Loader />
-            ) : filtered.length === 0 ? (
+            ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 Vendor가 없습니다.</Text>
             ) : (
                 <Table striped highlightOnHover withTableBorder>
@@ -99,13 +163,17 @@ export default function VendorsPage() {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {filtered.map((vendor) => (
+                        {items.map((vendor) => (
                             <Table.Tr key={vendor.id}>
                                 <Table.Td>{vendor.name}</Table.Td>
                                 <Table.Td>{vendor.description ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
-                                        <Button size="xs" variant="light" onClick={() => setDetail(vendor)}>
+                                        <Button
+                                            size="xs"
+                                            variant="light"
+                                            onClick={() => updateParam("detail", vendor.id)}
+                                        >
                                             상세
                                         </Button>
                                         <Menu shadow="md" position="bottom-end">
@@ -114,30 +182,33 @@ export default function VendorsPage() {
                                                     <IconDotsVertical size={16} />
                                                 </ActionIcon>
                                             </Menu.Target>
-                                        <Menu.Dropdown>
-                                            <Menu.Item
-                                                onClick={() => {
-                                                    setEditing({
-                                                        id: vendor.id,
-                                                        name: vendor.name,
-                                                        description: vendor.description,
-                                                    });
-                                                    editForm.setValues({
-                                                        name: vendor.name,
-                                                        description: vendor.description ?? "",
-                                                    });
-                                                }}
-                                            >
-                                                수정
-                                            </Menu.Item>
-                                            <Menu.Item
-                                                color="red"
-                                                onClick={() => {
-                                                setDeleteTarget({ id: vendor.id, name: vendor.name });
-                                            }}
-                                        >
-                                            삭제
-                                        </Menu.Item>
+                                            <Menu.Dropdown>
+                                                <Menu.Item
+                                                    onClick={() => {
+                                                        setEditing({
+                                                            id: vendor.id,
+                                                            name: vendor.name,
+                                                            description: vendor.description,
+                                                        });
+                                                        editForm.setValues({
+                                                            name: vendor.name,
+                                                            description: vendor.description ?? "",
+                                                        });
+                                                    }}
+                                                >
+                                                    수정
+                                                </Menu.Item>
+                                                <Menu.Item
+                                                    color="red"
+                                                    onClick={() =>
+                                                        setDeleteTarget({
+                                                            id: vendor.id,
+                                                            name: vendor.name,
+                                                        })
+                                                    }
+                                                >
+                                                    삭제
+                                                </Menu.Item>
                                             </Menu.Dropdown>
                                         </Menu>
                                     </Group>
@@ -147,6 +218,35 @@ export default function VendorsPage() {
                     </Table.Tbody>
                 </Table>
             )}
+
+            <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                    Total {pageData?.totalElements ?? 0}
+                </Text>
+                <Pagination
+                    total={pageData?.totalPages ?? 1}
+                    value={page}
+                    onChange={(value) => updateParam("page", String(value))}
+                />
+                <Select
+                    data={[
+                        { value: "10", label: "10 / page" },
+                        { value: "20", label: "20 / page" },
+                        { value: "50", label: "50 / page" },
+                    ]}
+                    value={String(size)}
+                    onChange={(value) => updateParam("size", value)}
+                />
+            </Group>
+
+            <Modal
+                opened={!!detailId}
+                onClose={() => updateParam("detail", null)}
+                title="Vendor 상세"
+                size="xl"
+            >
+                <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+            </Modal>
 
             <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Vendor 등록">
                 <form onSubmit={form.onSubmit((values) => mutation.mutate(values))}>
@@ -163,11 +263,7 @@ export default function VendorsPage() {
             </Modal>
 
             <Modal opened={!!editing} onClose={() => setEditing(null)} title="Vendor 수정">
-                <form
-                    onSubmit={editForm.onSubmit((values) => {
-                        updateMutation.mutate(values);
-                    })}
-                >
+                <form onSubmit={editForm.onSubmit((values) => updateMutation.mutate(values))}>
                     <Stack>
                         <TextInput label="Name" required {...editForm.getInputProps("name")} />
                         <TextInput label="Description" {...editForm.getInputProps("description")} />
@@ -178,13 +274,6 @@ export default function VendorsPage() {
                         </Group>
                     </Stack>
                 </form>
-            </Modal>
-
-            <Modal opened={!!detail} onClose={() => setDetail(null)} title="Vendor 상세" size="xl">
-                <CodeHighlight
-                    code={detail ? JSON.stringify(detail, null, 2) : ""}
-                    language="json"
-                />
             </Modal>
 
             <Modal opened={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Vendor 삭제">
