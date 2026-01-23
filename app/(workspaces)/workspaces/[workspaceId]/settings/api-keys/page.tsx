@@ -14,7 +14,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createApiKey, fetchApiKeys, fetchVendors } from "@/lib/api/settings";
+import { createApiKey, fetchWorkspaceApiKeys, fetchVendors } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 import { useParams } from "next/navigation";
 
@@ -30,8 +30,8 @@ export default function ApiKeysPage() {
     const queryClient = useQueryClient();
     const [modalOpen, setModalOpen] = React.useState(false);
     const { data: apiKeys = [], isLoading } = useQuery({
-        queryKey: workspaceId ? queryKeys.apiKeys(workspaceId) : [],
-        queryFn: () => fetchApiKeys(workspaceId || ""),
+        queryKey: workspaceId ? queryKeys.workspaceApiKeys(workspaceId) : [],
+        queryFn: () => fetchWorkspaceApiKeys(workspaceId || ""),
         enabled: !!workspaceId,
     });
 
@@ -56,10 +56,10 @@ export default function ApiKeysPage() {
             value: string;
             description?: string;
         }) =>
-            createApiKey(workspaceId || "", values),
+            createApiKey({ workspaceId: workspaceId || "", ...values }),
         onSuccess: () => {
             if (workspaceId) {
-                queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys(workspaceId) });
+                queryClient.invalidateQueries({ queryKey: queryKeys.workspaceApiKeys(workspaceId) });
             }
             setModalOpen(false);
             form.reset();

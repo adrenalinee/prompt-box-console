@@ -7,7 +7,7 @@ import type { CallLog } from "@/lib/api/llmCalls";
 
 type LogTableProps = {
     logs: CallLog[];
-    workspaceId: string;
+    workspaceId?: string;
 };
 
 export function LogTable({ logs, workspaceId }: LogTableProps) {
@@ -26,13 +26,17 @@ export function LogTable({ logs, workspaceId }: LogTableProps) {
                 {logs.map((log) => (
                     <Table.Tr key={log.id}>
                         <Table.Td>
-                            <Text
-                                component={Link}
-                                href={`/workspaces/${workspaceId}/logs/${log.id}`}
-                                fw={600}
-                            >
-                                {log.id}
-                            </Text>
+                            {workspaceId || log.workspaceId ? (
+                                <Text
+                                    component={Link}
+                                    href={`/workspaces/${workspaceId ?? log.workspaceId}/logs/${log.id}`}
+                                    fw={600}
+                                >
+                                    {log.id}
+                                </Text>
+                            ) : (
+                                <Text fw={600}>{log.id}</Text>
+                            )}
                         </Table.Td>
                         <Table.Td>{log.llmModelId ?? "-"}</Table.Td>
                         <Table.Td>{log.status ?? "-"}</Table.Td>

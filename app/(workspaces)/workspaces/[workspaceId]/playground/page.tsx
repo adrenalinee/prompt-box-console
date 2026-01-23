@@ -5,7 +5,7 @@ import { Grid, Loader, Stack, Text } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearchParams, useParams } from "next/navigation";
 import { fetchPrompts, fetchRefs, fetchSnapshots } from "@/lib/api/prompts";
-import { fetchApiKeys, fetchModels, fetchVendors } from "@/lib/api/settings";
+import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { executeCall } from "@/lib/api/llmCalls";
 import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel } from "@/components/playground/ExecutePanel";
@@ -58,14 +58,16 @@ export default function PlaygroundPage() {
     }, [vendors, selectedVendorId]);
 
     const { data: models = [], isLoading: modelsLoading } = useQuery({
-        queryKey: selectedVendorId ? queryKeys.models(selectedVendorId) : [],
-        queryFn: () => fetchModels(selectedVendorId || ""),
-        enabled: !!selectedVendorId,
+        queryKey: workspaceId
+            ? queryKeys.workspaceModels(workspaceId, selectedVendorId)
+            : [],
+        queryFn: () => fetchWorkspaceModels(workspaceId || "", selectedVendorId || undefined),
+        enabled: !!workspaceId,
     });
 
     const { data: apiKeys = [], isLoading: apiKeysLoading } = useQuery({
-        queryKey: workspaceId ? queryKeys.apiKeys(workspaceId) : [],
-        queryFn: () => fetchApiKeys(workspaceId || ""),
+        queryKey: workspaceId ? queryKeys.workspaceApiKeys(workspaceId) : [],
+        queryFn: () => fetchWorkspaceApiKeys(workspaceId || ""),
         enabled: !!workspaceId,
     });
 

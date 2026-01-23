@@ -1,13 +1,26 @@
 "use client";
 
 import React from "react";
-import { Group, Loader, Select, Stack, Text } from "@mantine/core";
+import {
+    ActionIcon,
+    Button,
+    CopyButton,
+    Group,
+    Loader,
+    Menu,
+    Modal,
+    Select,
+    Stack,
+    Table,
+    Text,
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { fetchLogs } from "@/lib/api/llmCalls";
+import { fetchAllLogs, fetchLog } from "@/lib/api/llmCalls";
 import { fetchModels, fetchVendors } from "@/lib/api/settings";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
-import { LogTable } from "@/components/logs/LogTable";
+import { CodeHighlight } from "@mantine/code-highlight";
+import { IconDotsVertical } from "@tabler/icons-react";
 
 export default function SettingsLogsPage() {
     const [workspaceId, setWorkspaceId] = React.useState<string | null>(null);
@@ -20,31 +33,18 @@ export default function SettingsLogsPage() {
         queryFn: () => fetchWorkspaces(),
     });
 
-    React.useEffect(() => {
-        if (!workspaceId && workspaces.length > 0) {
-            setWorkspaceId(workspaces[0].id);
-        }
-    }, [workspaces, workspaceId]);
-
     const { data: vendors = [] } = useQuery({
         queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
     });
 
     React.useEffect(() => {
-        if (!vendorId && vendors.length > 0) {
-            setVendorId(vendors[0].id);
-        }
-    }, [vendors, vendorId]);
-
-    React.useEffect(() => {
         setModelId(null);
     }, [vendorId]);
 
     const { data: models = [] } = useQuery({
-        queryKey: vendorId ? queryKeys.models(vendorId) : [],
-        queryFn: () => fetchModels(vendorId || ""),
-        enabled: !!vendorId,
+        queryKey: queryKeys.models(vendorId),
+        queryFn: () => fetchModels(vendorId || undefined),
     });
 
     const filters = React.useMemo(
@@ -56,9 +56,13 @@ export default function SettingsLogsPage() {
     );
 
     const { data: logs = [], isLoading } = useQuery({
-        queryKey: workspaceId ? queryKeys.logs(workspaceId, filters) : [],
-        queryFn: () => fetchLogs(workspaceId || "", filters),
-        enabled: !!workspaceId,
+        queryKey: queryKeys.logsAll({ ...filters, workspaceId }),
+        queryFn: () =>
+            fetchAllLogs({
+                workspaceId: workspaceId || undefined,
+                modelId: modelId || undefined,
+                status: status || undefined,
+            }),
     });
 
     const workspaceOptions = workspaces.map((workspace) => ({
@@ -89,6 +93,7 @@ export default function SettingsLogsPage() {
                     value={workspaceId}
                     onChange={setWorkspaceId}
                     disabled={workspaceLoading}
+                    clearable
                 />
                 <Select
                     label="Vendor"
@@ -122,13 +127,97 @@ export default function SettingsLogsPage() {
             </Group>
             {isLoading ? (
                 <Loader />
-            ) : !workspaceId ? (
-                <Text c="dimmed">Workspace를 선택하세요.</Text>
             ) : logs.length === 0 ? (
                 <Text c="dimmed">로그가 없습니다.</Text>
             ) : (
-                <LogTable logs={logs} workspaceId={workspaceId} />
+                <TableWrapper logs={logs} />
             )}
         </Stack>
+    );
+}
+
+type LogRow = {
+    id: string;
+    workspaceId?: string;
+    llmModelId?: number;
+    status?: string;
+    elapsed?: number;
+    errorMessage?: string;
+};
+
+function TableWrapper({ logs }: { logs: LogRow[] }) {
+    const [detailId, setDetailId] = React.useState<string | null>(null);
+    const { data: detail } = useQuery({
+        queryKey: detailId ? queryKeys.log(detailId) : [],
+        queryFn: () => fetchLog(detailId || ""),
+        enabled: !!detailId,
+    });
+
+    return (
+        <>
+            <Table striped highlightOnHover withTableBorder>
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th>ID</Table.Th>
+                        <Table.Th>Workspace</Table.Th>
+                        <Table.Th>Model</Table.Th>
+                        <Table.Th>Status</Table.Th>
+                        <Table.Th>Elapsed</Table.Th>
+                        <Table.Th>Error</Table.Th>
+                        <Table.Th ta="right">Actions</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {logs.map((log) => (
+                        <Table.Tr key={log.id}>
+                            <Table.Td>{log.id}</Table.Td>
+                            <Table.Td>{log.workspaceId ?? "-"}</Table.Td>
+                            <Table.Td>{log.llmModelId ?? "-"}</Table.Td>
+                            <Table.Td>{log.status ?? "-"}</Table.Td>
+                            <Table.Td>{log.elapsed ?? "-"}</Table.Td>
+                            <Table.Td>{log.errorMessage ?? "-"}</Table.Td>
+                            <Table.Td ta="right">
+                                <Group gap="xs" justify="flex-end">
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() => setDetailId(log.id)}
+                                    >
+                                        상세
+                                    </Button>
+                                    <Menu shadow="md" position="bottom-end">
+                                        <Menu.Target>
+                                            <ActionIcon variant="light">
+                                                <IconDotsVertical size={16} />
+                                            </ActionIcon>
+                                        </Menu.Target>
+                                        <Menu.Dropdown>
+                                            <Menu.Item disabled>수정</Menu.Item>
+                                            <Menu.Item disabled>삭제</Menu.Item>
+                                        </Menu.Dropdown>
+                                    </Menu>
+                                </Group>
+                            </Table.Td>
+                        </Table.Tr>
+                    ))}
+                </Table.Tbody>
+            </Table>
+
+            <Modal opened={!!detailId} onClose={() => setDetailId(null)} title="Log 상세" size="xl">
+                <Group justify="flex-end" mb="xs">
+                    <CopyButton value={detail ? JSON.stringify(detail, null, 2) : ""}>
+                        {({ copied, copy }) => (
+                            <Button size="xs" variant="light" onClick={copy}>
+                                {copied ? "Copied" : "Copy JSON"}
+                            </Button>
+                        )}
+                    </CopyButton>
+                </Group>
+                <CodeHighlight
+                    code={detail ? JSON.stringify(detail, null, 2) : ""}
+                    language="json"
+                />
+            </Modal>
+        </>
     );
 }

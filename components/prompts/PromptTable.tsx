@@ -7,7 +7,7 @@ import type { Prompt } from "@/lib/api/prompts";
 
 type PromptTableProps = {
     prompts: Prompt[];
-    workspaceId: string;
+    workspaceId?: string;
 };
 
 export function PromptTable({ prompts, workspaceId }: PromptTableProps) {
@@ -24,13 +24,17 @@ export function PromptTable({ prompts, workspaceId }: PromptTableProps) {
                 {prompts.map((prompt) => (
                     <Table.Tr key={prompt.id}>
                         <Table.Td>
-                            <Text
-                                component={Link}
-                                href={`/workspaces/${workspaceId}/prompts/${prompt.id}`}
-                                fw={600}
-                            >
-                                {prompt.name}
-                            </Text>
+                            {workspaceId || prompt.workspaceId ? (
+                                <Text
+                                    component={Link}
+                                    href={`/workspaces/${workspaceId ?? prompt.workspaceId}/prompts/${prompt.id}`}
+                                    fw={600}
+                                >
+                                    {prompt.name}
+                                </Text>
+                            ) : (
+                                <Text fw={600}>{prompt.name}</Text>
+                            )}
                         </Table.Td>
                         <Table.Td>{prompt.latestRefId ?? "-"}</Table.Td>
                         <Table.Td>{prompt.description ?? "-"}</Table.Td>

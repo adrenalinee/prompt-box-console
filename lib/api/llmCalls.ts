@@ -65,6 +65,22 @@ export async function fetchLogs(
     return response.items;
 }
 
+export async function fetchAllLogs(
+    filters: { workspaceId?: string; modelId?: string; status?: string },
+    page = 0,
+    size = 50,
+) {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
+    if (filters.modelId) params.set("modelId", String(filters.modelId));
+    if (filters.status) params.set("status", String(filters.status));
+    params.set("page", String(page));
+    params.set("size", String(size));
+
+    const response = await apiFetch<PageResponse<CallLog>>(`/llm-calls?${params.toString()}`);
+    return response.items;
+}
+
 export async function fetchLog(callId: string) {
     return apiFetch<CallLogDetail>(`/llm-calls/${callId}`);
 }

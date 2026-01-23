@@ -4,6 +4,7 @@ import React from "react";
 import { AppShell, Group, Text, Burger, Box } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { SettingsNav } from "@/components/layout/SettingsNav";
+import Link from "next/link";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
     const [opened, { toggle }] = useDisclosure();
@@ -22,7 +23,12 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <Text fw={700}>Settings</Text>
+                        <Text component={Link} href="/" fw={700}>
+                            mostPrompt
+                        </Text>
+                        <Text fw={600} c="dimmed">
+                            Settings
+                        </Text>
                     </Group>
                 </Group>
             </AppShell.Header>

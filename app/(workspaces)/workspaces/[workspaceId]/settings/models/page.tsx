@@ -15,10 +15,13 @@ import {
 } from "@mantine/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@mantine/form";
-import { createModel, fetchModels, fetchVendors } from "@/lib/api/settings";
+import { createModel, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
+import { useParams } from "next/navigation";
 
 export default function ModelsPage() {
+    const params = useParams();
+    const workspaceId = params?.workspaceId as string;
     const [vendorId, setVendorId] = React.useState<string | null>(null);
     const [modalOpen, setModalOpen] = React.useState(false);
     const queryClient = useQueryClient();
@@ -35,9 +38,11 @@ export default function ModelsPage() {
     }, [vendors, vendorId]);
 
     const { data: models = [], isLoading } = useQuery({
-        queryKey: vendorId ? queryKeys.models(vendorId) : [],
-        queryFn: () => fetchModels(vendorId || ""),
-        enabled: !!vendorId,
+        queryKey: workspaceId
+            ? queryKeys.workspaceModels(workspaceId, vendorId)
+            : [],
+        queryFn: () => fetchWorkspaceModels(workspaceId, vendorId || undefined),
+        enabled: !!workspaceId,
     });
 
     const vendorOptions = vendors.map((vendor) => ({
@@ -64,10 +69,13 @@ export default function ModelsPage() {
             inputPrice?: number;
             outputPrice?: number;
             description?: string;
-        }) => createModel(vendorId || "", values),
+            vendorId: string;
+        }) => createModel(values),
         onSuccess: () => {
-            if (vendorId) {
-                queryClient.invalidateQueries({ queryKey: queryKeys.models(vendorId) });
+            if (workspaceId) {
+                queryClient.invalidateQueries({
+                    queryKey: queryKeys.workspaceModels(workspaceId, vendorId),
+                });
             }
             setModalOpen(false);
             form.reset();
@@ -130,6 +138,7 @@ export default function ModelsPage() {
                             return;
                         }
                         mutation.mutate({
+                            vendorId,
                             name: values.name,
                             modelKey: values.modelKey,
                             contextWindow: values.contextWindow ?? undefined,

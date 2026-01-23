@@ -4,7 +4,7 @@ import React from "react";
 import { Group, Loader, Select, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLogs } from "@/lib/api/llmCalls";
-import { fetchModels, fetchVendors } from "@/lib/api/settings";
+import { fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 import { LogTable } from "@/components/logs/LogTable";
 import { useParams } from "next/navigation";
@@ -32,9 +32,11 @@ export default function LogsPage() {
     }, [vendorId]);
 
     const { data: models = [] } = useQuery({
-        queryKey: vendorId ? queryKeys.models(vendorId) : [],
-        queryFn: () => fetchModels(vendorId || ""),
-        enabled: !!vendorId,
+        queryKey: workspaceId
+            ? queryKeys.workspaceModels(workspaceId, vendorId)
+            : [],
+        queryFn: () => fetchWorkspaceModels(workspaceId || "", vendorId || undefined),
+        enabled: !!workspaceId,
     });
 
     const filters = React.useMemo(

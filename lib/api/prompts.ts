@@ -32,18 +32,49 @@ export async function fetchPrompts(workspaceId: string, page = 0, size = 50) {
     return response.items;
 }
 
+export async function fetchAllPrompts(
+    filters: { workspaceId?: string; name?: string },
+    page = 0,
+    size = 50,
+) {
+    const params = new URLSearchParams();
+    if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
+    if (filters.name) params.set("name", filters.name);
+    params.set("page", String(page));
+    params.set("size", String(size));
+
+    const response = await apiFetch<PageResponse<Prompt>>(`/prompts?${params.toString()}`);
+    return response.items;
+}
+
 export async function createPrompt(
     workspaceId: string,
     payload: { name: string; instructions: string; description?: string; mainRefName?: string },
 ) {
-    return apiFetch<Prompt>(`/workspaces/${workspaceId}/prompts`, {
+    return apiFetch<Prompt>(`/prompts`, {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, workspaceId }),
     });
 }
 
 export async function fetchPrompt(promptId: string) {
     return apiFetch<PromptDetail>(`/prompts/${promptId}`);
+}
+
+export async function updatePrompt(
+    promptId: string,
+    payload: { name?: string; description?: string },
+) {
+    return apiFetch<PromptDetail>(`/prompts/${promptId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+    });
+}
+
+export async function deletePrompt(promptId: string) {
+    return apiFetch<void>(`/prompts/${promptId}`, {
+        method: "DELETE",
+    });
 }
 
 export async function fetchSnapshots(promptId: string) {
