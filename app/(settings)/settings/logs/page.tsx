@@ -1,26 +1,14 @@
 "use client";
 
 import React from "react";
-import {
-    ActionIcon,
-    Button,
-    CopyButton,
-    Group,
-    Loader,
-    Menu,
-    Modal,
-    Select,
-    Stack,
-    Table,
-    Text,
-} from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { fetchAllLogs, fetchLog } from "@/lib/api/llmCalls";
-import { fetchModels, fetchVendors } from "@/lib/api/settings";
-import { fetchWorkspaces } from "@/lib/api/workspaces";
-import { queryKeys } from "@/lib/query/keys";
-import { CodeHighlight } from "@mantine/code-highlight";
-import { IconDotsVertical } from "@tabler/icons-react";
+import {ActionIcon, Button, Group, Loader, Menu, Modal, Select, Stack, Table, Text,} from "@mantine/core";
+import {useQuery} from "@tanstack/react-query";
+import {fetchAllLogs, fetchLog} from "@/lib/api/llmCalls";
+import {fetchModels, fetchVendors} from "@/lib/api/settings";
+import {fetchWorkspaces} from "@/lib/api/workspaces";
+import {queryKeys} from "@/lib/query/keys";
+import {CodeHighlight} from "@mantine/code-highlight";
+import {IconDotsVertical} from "@tabler/icons-react";
 
 export default function SettingsLogsPage() {
     const [workspaceId, setWorkspaceId] = React.useState<string | null>(null);
@@ -204,15 +192,6 @@ function TableWrapper({ logs }: { logs: LogRow[] }) {
             </Table>
 
             <Modal opened={!!detailId} onClose={() => setDetailId(null)} title="Log 상세" size="xl">
-                <Group justify="flex-end" mb="xs">
-                    <CopyButton value={detail ? JSON.stringify(detail, null, 2) : ""}>
-                        {({ copied, copy }) => (
-                            <Button size="xs" variant="light" onClick={copy}>
-                                {copied ? "Copied" : "Copy JSON"}
-                            </Button>
-                        )}
-                    </CopyButton>
-                </Group>
                 <CodeHighlight
                     code={detail ? JSON.stringify(detail, null, 2) : ""}
                     language="json"

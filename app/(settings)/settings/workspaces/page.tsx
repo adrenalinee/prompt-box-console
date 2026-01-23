@@ -1,30 +1,13 @@
 "use client";
 
 import React from "react";
-import {
-    ActionIcon,
-    Button,
-    CopyButton,
-    Group,
-    Loader,
-    Menu,
-    Modal,
-    Stack,
-    Table,
-    Text,
-    TextInput,
-} from "@mantine/core";
-import { CodeHighlight } from "@mantine/code-highlight";
-import { IconDotsVertical } from "@tabler/icons-react";
-import { useForm } from "@mantine/form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-    createWorkspace,
-    deleteWorkspace,
-    fetchWorkspaces,
-    updateWorkspace,
-} from "@/lib/api/workspaces";
-import { queryKeys } from "@/lib/query/keys";
+import {ActionIcon, Button, Group, Loader, Menu, Modal, Stack, Table, Text, TextInput,} from "@mantine/core";
+import {CodeHighlight} from "@mantine/code-highlight";
+import {IconDotsVertical} from "@tabler/icons-react";
+import {useForm} from "@mantine/form";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {createWorkspace, deleteWorkspace, fetchWorkspaces, updateWorkspace,} from "@/lib/api/workspaces";
+import {queryKeys} from "@/lib/query/keys";
 
 export default function WorkspacesPage() {
     const queryClient = useQueryClient();
@@ -198,15 +181,6 @@ export default function WorkspacesPage() {
             </Modal>
 
             <Modal opened={!!detail} onClose={() => setDetail(null)} title="Workspace 상세" size="xl">
-                <Group justify="flex-end" mb="xs">
-                    <CopyButton value={detail ? JSON.stringify(detail, null, 2) : ""}>
-                        {({ copied, copy }) => (
-                            <Button size="xs" variant="light" onClick={copy}>
-                                {copied ? "Copied" : "Copy JSON"}
-                            </Button>
-                        )}
-                    </CopyButton>
-                </Group>
                 <CodeHighlight
                     code={detail ? JSON.stringify(detail, null, 2) : ""}
                     language="json"

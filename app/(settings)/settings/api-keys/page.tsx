@@ -1,33 +1,14 @@
 "use client";
 
 import React from "react";
-import {
-    ActionIcon,
-    Button,
-    CopyButton,
-    Group,
-    Loader,
-    Menu,
-    Modal,
-    Select,
-    Stack,
-    Table,
-    Text,
-    TextInput,
-} from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-    createApiKey,
-    deleteApiKey,
-    fetchApiKeys,
-    fetchVendors,
-    updateApiKey,
-} from "@/lib/api/settings";
-import { fetchWorkspaces } from "@/lib/api/workspaces";
-import { queryKeys } from "@/lib/query/keys";
-import { CodeHighlight } from "@mantine/code-highlight";
-import { IconDotsVertical } from "@tabler/icons-react";
+import {ActionIcon, Button, Group, Loader, Menu, Modal, Select, Stack, Table, Text, TextInput,} from "@mantine/core";
+import {useForm} from "@mantine/form";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {createApiKey, deleteApiKey, fetchApiKeys, fetchVendors, updateApiKey,} from "@/lib/api/settings";
+import {fetchWorkspaces} from "@/lib/api/workspaces";
+import {queryKeys} from "@/lib/query/keys";
+import {CodeHighlight} from "@mantine/code-highlight";
+import {IconDotsVertical} from "@tabler/icons-react";
 
 function maskKey(value?: string) {
     if (!value) return "••••••";
@@ -330,15 +311,6 @@ export default function SettingsApiKeysPage() {
             </Modal>
 
             <Modal opened={!!detail} onClose={() => setDetail(null)} title="API Key 상세" size="xl">
-                <Group justify="flex-end" mb="xs">
-                    <CopyButton value={detail ? JSON.stringify(detail, null, 2) : ""}>
-                        {({ copied, copy }) => (
-                            <Button size="xs" variant="light" onClick={copy}>
-                                {copied ? "Copied" : "Copy JSON"}
-                            </Button>
-                        )}
-                    </CopyButton>
-                </Group>
                 <CodeHighlight
                     code={detail ? JSON.stringify(detail, null, 2) : ""}
                     language="json"
