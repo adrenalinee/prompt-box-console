@@ -6,12 +6,13 @@ import { useForm } from "@mantine/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { showNotification } from "@mantine/notifications";
-import { useWorkspace } from "@/lib/workspace/context";
 import { createPrompt } from "@/lib/api/prompts";
 import { queryKeys } from "@/lib/query/keys";
+import { useParams } from "next/navigation";
 
 export default function NewPromptPage() {
-    const { workspaceId } = useWorkspace();
+    const params = useParams();
+    const workspaceId = params?.workspaceId as string;
     const router = useRouter();
     const queryClient = useQueryClient();
 
@@ -35,7 +36,7 @@ export default function NewPromptPage() {
                 title: "Prompt 생성",
                 message: "새 Prompt가 생성되었습니다.",
             });
-            router.push(`/prompts/${prompt.id}`);
+            router.push(`/workspaces/${workspaceId}/prompts/${prompt.id}`);
         },
     });
 
@@ -44,7 +45,19 @@ export default function NewPromptPage() {
             <Text fw={700} size="xl">
                 새 Prompt 만들기
             </Text>
-            <form onSubmit={form.onSubmit((values) => mutation.mutate(values))}>
+            <form
+                onSubmit={form.onSubmit((values) => {
+                    if (!workspaceId) {
+                        showNotification({
+                            color: "red",
+                            title: "워크스페이스 없음",
+                            message: "Workspace를 불러올 수 없습니다.",
+                        });
+                        return;
+                    }
+                    mutation.mutate(values);
+                })}
+            >
                 <Stack>
                     <TextInput label="Prompt 이름" required {...form.getInputProps("name")} />
                     <TextInput label="설명" {...form.getInputProps("description")} />

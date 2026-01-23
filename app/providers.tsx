@@ -6,7 +6,6 @@ import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { themeOverride } from '@/app/theme';
-import { WorkspaceProvider } from '@/lib/workspace/context';
 
 const theme = createTheme(themeOverride);
 
@@ -25,7 +24,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <MantineProvider theme={theme} defaultColorScheme="light">
                 <ModalsProvider>
                     <Notifications position="top-right" />
-                    <WorkspaceProvider>{children}</WorkspaceProvider>
+                    {children}
                 </ModalsProvider>
             </MantineProvider>
         </QueryClientProvider>

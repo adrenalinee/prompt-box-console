@@ -9,8 +9,9 @@ http://localhost:8080
 - api spec: /api-docs
 - swagger: /swagger-ui
 
-2.Workspace 처리 방식(익명 1인, workspace 1개 가정)
-앱 부팅 시 GET /workspaces 호출 → 첫 workspace를 active로 사용
+2.Workspace 처리 방식
+- root('/') 랜딩에서 GET /workspaces 호출 → 워크스페이스 선택
+- 선택 시 '/workspaces/{workspaceId}/playground'로 이동
 
 3.언어
 - 옵션: UI 한국어/영어
@@ -69,29 +70,47 @@ app/
   providers.tsx
   globals.css
 
-  (dashboard)/
-    layout.tsx
+  (root)/
     page.tsx
 
-    prompts/
-      page.tsx
-      new/
+  (workspaces)/
+    workspaces/
+      [workspaceId]/
+        layout.tsx
         page.tsx
-      [promptId]/
-        page.tsx
+        prompts/
+          page.tsx
+          new/
+            page.tsx
+          [promptId]/
+            page.tsx
+        playground/
+          page.tsx
+        logs/
+          page.tsx
+          [callId]/
+            page.tsx
+        settings/
+          api-keys/
+            page.tsx
+          models/
+            page.tsx
 
-    playground/
-      page.tsx
-
-    logs/
-      page.tsx
-      [callId]/
-        page.tsx
-
+  (settings)/
     settings/
+      layout.tsx
+      page.tsx
+      workspaces/
+        page.tsx
+      vendors/
+        page.tsx
       api-keys/
         page.tsx
       models/
+        page.tsx
+      prompts/
+        page.tsx
+      logs/
         page.tsx
 
 lib/
@@ -127,28 +146,43 @@ components/
 - app/layout.tsx에서 Mantine styles.layer.css import + globals.css import
 - Providers는 client 컴포넌트로 분리: MantineProvider + ReactQuery + Notifications + Modals
 
-## 5.2 Dashboard Layout: AppShell
-
+## 5.2 Workspaces Layout: AppShell (워크스페이스용)
 Mantine AppShell로 헤더/네비/메인 구성. AppShell은 header/navbar/aside/footer 레이아웃 패턴을 제공.
-
 - 네비 메뉴:
   - Prompts
   - Playground
   - Logs
   - Settings(API Keys, Models)
+- 헤더 우측: 기어 아이콘 → '/settings' 이동
+
+## 5.3 Settings Layout: AppShell (전역 관리용)
+전역 관리용 사이드바 제공. 메뉴:
+- Workspaces
+- Vendors
+- API Keys
+- Models
+- Prompts
+- Logs
 
 # 6) 라우팅(IA) & 페이지별 요구사항
+## 6.0 Root (Landing)
+- '/'에서 워크스페이스 선택 Select 제공
+- 선택 시 '/workspaces/{workspaceId}/playground' 이동
+
 ## 6.1 /prompts (목록)
+경로: '/workspaces/{workspaceId}/prompts'
 목표: Prompt 목록 + "새 Prompt 만들기" 버튼
 - Mantine: Table, ScrollArea, TextInput(검색), Button
 - 항목 표시: name, latestRef, updatedAt(가능하면)
 
 ## 6.2 /prompts/new (생성)
+경로: '/workspaces/{workspaceId}/prompts/new'
 목표: Prompt 생성 시 main branch + snapshot v1 생성 (백엔드 정책 그대로)
 - 입력: prompt name, instructions(초기)
 - 성공 시 /prompts/[promptId] 이동 + toast
 
 ## 6.3 /prompts/[promptId] (상세: Tabs 권장)
+경로: '/workspaces/{workspaceId}/prompts/[promptId]'
 Tabs: Editor / Snapshots / Refs
 - Editor 탭:
   - instructions 편집 → "저장"은 새 snapshot 생성으로 동작(선형 버전)
@@ -162,6 +196,7 @@ Tabs: Editor / Snapshots / Refs
   - BRANCH 이동: target snapshot 선택 후 PATCH 호출
 
 ## 6.4 /playground
+경로: '/workspaces/{workspaceId}/playground'
 목표: ref/snapshot/raw 중 하나로 실행하고 output 표시 + callLogId 링크
 - 실행 소스 선택: SegmentedControl(REF, SNAPSHOT, RAW)
 - 모델/키 선택: vendor/model/apiKey select
@@ -169,13 +204,19 @@ Tabs: Editor / Snapshots / Refs
 - 실행 결과: outputText 표시 + "Logs 상세 이동" 링크
 
 ## 6.5 /logs, /logs/[callId]
+경로: '/workspaces/{workspaceId}/logs', '/workspaces/{workspaceId}/logs/[callId]'
 - 목록: 필터(promptId, modelId, status, from/to) + table
 - 상세: InputItems/OutputItems/Resolved options/모델정보
   - output/options는 code highlight + CopyButton
 
 ## 6.6 /settings/api-keys, /settings/models
+경로: '/workspaces/{workspaceId}/settings/api-keys', '/workspaces/{workspaceId}/settings/models'
 - API Keys: 목록(마스킹) + 등록/수정(평문 입력은 여기서만)
 - Models: vendor/modelKey 목록(메타 표시)
+
+## 6.7 전역 Settings (관리용)
+경로: '/settings/*'
+- Workspaces, Vendors, API Keys, Models, Prompts, Logs 관리 메뉴
 
 # 7) API 통합 지침(필수)
 ## 7.1 Base URL
@@ -185,10 +226,9 @@ Tabs: Editor / Snapshots / Refs
   - HTTP 에러를 { status, code?, message }로 normalize
   - 에러 메시지를 toast로 표시(Notifications)
 
-## 7.2 Workspace 부팅 로직(기본값 A)
-- 앱 시작 시 GET /workspaces
-- 첫 workspace를 active workspace로 사용 (state로 유지)
-- 모든 페이지/쿼리는 workspaceId를 이 state에서 참조
+## 7.2 Workspace 부팅 로직
+- root('/')에서 GET /workspaces 후 사용자 선택
+- '/workspaces/{workspaceId}/*'에서 라우트 param 기반으로 workspaceId 사용
 
 ## 7.3 React Query 키 설계
 - workspaces, prompts(workspaceId), prompt(promptId), snapshots(promptId), refs(promptId)
@@ -204,13 +244,11 @@ Tabs: Editor / Snapshots / Refs
 - vendor 일치 검증은 서버가 최종 책임이지만, 가능하면 UI에서 model/vendor와 key/vendor mismatch 시 경고 표시
 
 # 9) 구현 순서(이대로 하면 막힘 적음)
-1.스캐폴딩 + styles.layer + Providers + Dashboard(AppShell) 완성
-2./prompts 목록(더미 → 실제 API)
-3./prompts/new 생성 연결
-4./prompts/[id] (Editor → snapshot 생성 연결)
-5./playground 실행 연결(결과 표시 + log 링크)
-6./logs 목록/상세 연결
-7.settings(api keys, models) 마무리
+1.스캐폴딩 + styles.layer + Providers 완성
+2.루트 랜딩 + 워크스페이스 선택
+3./workspaces/{id} AppShell + prompts/playground/logs
+4./workspaces/{id}/settings(api keys, models)
+5./settings (전역 관리) 확장
 
 # 10) Definition of Done (완료 기준)
 - Prompts:

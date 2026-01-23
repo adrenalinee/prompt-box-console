@@ -9,4 +9,5 @@ export const queryKeys = {
     log: (callId: string) => ["log", callId] as const,
     models: (workspaceId: string) => ["models", workspaceId] as const,
     apiKeys: (workspaceId: string) => ["apiKeys", workspaceId] as const,
+    vendors: ["vendors"] as const,
 };

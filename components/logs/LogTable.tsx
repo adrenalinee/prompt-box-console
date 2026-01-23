@@ -7,9 +7,10 @@ import type { CallLog } from "@/lib/api/llmCalls";
 
 type LogTableProps = {
     logs: CallLog[];
+    workspaceId: string;
 };
 
-export function LogTable({ logs }: LogTableProps) {
+export function LogTable({ logs, workspaceId }: LogTableProps) {
     return (
         <Table striped highlightOnHover withTableBorder>
             <Table.Thead>
@@ -25,7 +26,11 @@ export function LogTable({ logs }: LogTableProps) {
                 {logs.map((log) => (
                     <Table.Tr key={log.id}>
                         <Table.Td>
-                            <Text component={Link} href={`/logs/${log.id}`} fw={600}>
+                            <Text
+                                component={Link}
+                                href={`/workspaces/${workspaceId}/logs/${log.id}`}
+                                fw={600}
+                            >
                                 {log.id}
                             </Text>
                         </Table.Td>

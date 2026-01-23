@@ -3,20 +3,31 @@
 import React from "react";
 import { Group, Loader, Select, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { useWorkspace } from "@/lib/workspace/context";
 import { fetchLogs } from "@/lib/api/llmCalls";
 import { fetchModels, fetchVendors } from "@/lib/api/settings";
+import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
 import { LogTable } from "@/components/logs/LogTable";
 
-export default function LogsPage() {
-    const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
+export default function SettingsLogsPage() {
+    const [workspaceId, setWorkspaceId] = React.useState<string | null>(null);
     const [modelId, setModelId] = React.useState<string | null>(null);
     const [status, setStatus] = React.useState<string | null>(null);
     const [vendorId, setVendorId] = React.useState<string | null>(null);
 
+    const { data: workspaces = [], isLoading: workspaceLoading } = useQuery({
+        queryKey: queryKeys.workspaces,
+        queryFn: () => fetchWorkspaces(),
+    });
+
+    React.useEffect(() => {
+        if (!workspaceId && workspaces.length > 0) {
+            setWorkspaceId(workspaces[0].id);
+        }
+    }, [workspaces, workspaceId]);
+
     const { data: vendors = [] } = useQuery({
-        queryKey: ["vendors"],
+        queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
     });
 
@@ -50,6 +61,11 @@ export default function LogsPage() {
         enabled: !!workspaceId,
     });
 
+    const workspaceOptions = workspaces.map((workspace) => ({
+        value: workspace.id,
+        label: workspace.name,
+    }));
+
     const vendorOptions = vendors.map((vendor) => ({
         value: vendor.id,
         label: vendor.name,
@@ -60,16 +76,20 @@ export default function LogsPage() {
         label: `${model.modelKey}`,
     }));
 
-    if (workspaceLoading) {
-        return <Loader />;
-    }
-
     return (
         <Stack>
             <Text fw={700} size="xl">
                 Logs
             </Text>
             <Group grow>
+                <Select
+                    label="Workspace"
+                    placeholder="Workspace 선택"
+                    data={workspaceOptions}
+                    value={workspaceId}
+                    onChange={setWorkspaceId}
+                    disabled={workspaceLoading}
+                />
                 <Select
                     label="Vendor"
                     placeholder="전체"
@@ -102,10 +122,12 @@ export default function LogsPage() {
             </Group>
             {isLoading ? (
                 <Loader />
+            ) : !workspaceId ? (
+                <Text c="dimmed">Workspace를 선택하세요.</Text>
             ) : logs.length === 0 ? (
                 <Text c="dimmed">로그가 없습니다.</Text>
             ) : (
-                <LogTable logs={logs} />
+                <LogTable logs={logs} workspaceId={workspaceId} />
             )}
         </Stack>
     );

@@ -4,7 +4,6 @@ import React from "react";
 import { Loader, Stack, Tabs, Text } from "@mantine/core";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useWorkspace } from "@/lib/workspace/context";
 import {
     createSnapshot,
     fetchPrompt,
@@ -32,7 +31,7 @@ function pickLatestInstructions(instructionsList: { instructions: string; versio
 export default function PromptDetailPage() {
     const params = useParams();
     const promptId = params?.promptId as string;
-    const { workspaceId } = useWorkspace();
+    const workspaceId = params?.workspaceId as string;
     const queryClient = useQueryClient();
 
     const { data: prompt, isLoading: promptLoading } = useQuery({
@@ -115,7 +114,11 @@ export default function PromptDetailPage() {
                     ) : snapshots.length === 0 ? (
                         <Text c="dimmed">스냅샷이 없습니다.</Text>
                     ) : (
-                        <SnapshotTable promptId={promptId} snapshots={snapshots} />
+                        <SnapshotTable
+                            promptId={promptId}
+                            workspaceId={workspaceId}
+                            snapshots={snapshots}
+                        />
                     )}
                 </Tabs.Panel>
 

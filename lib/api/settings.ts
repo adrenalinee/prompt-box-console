@@ -48,9 +48,33 @@ export async function fetchVendors(page = 0, size = 50) {
     return response.items;
 }
 
+export async function createVendor(payload: { name: string; description?: string }) {
+    return apiFetch<Vendor>(`/llm-vendors`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
+}
+
 export async function fetchModels(vendorId: string, page = 0, size = 50) {
     const response = await apiFetch<PageResponse<Model>>(
         `/llm-vendors/${vendorId}/models?page=${page}&size=${size}`,
     );
     return response.items;
+}
+
+export async function createModel(
+    vendorId: string,
+    payload: {
+        name: string;
+        modelKey: string;
+        contextWindow?: number;
+        inputPrice?: number;
+        outputPrice?: number;
+        description?: string;
+    },
+) {
+    return apiFetch<Model>(`/llm-vendors/${vendorId}/models`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+    });
 }

@@ -7,10 +7,11 @@ import type { Snapshot } from "@/lib/api/prompts";
 
 type SnapshotTableProps = {
     promptId: string;
+    workspaceId: string;
     snapshots: Snapshot[];
 };
 
-export function SnapshotTable({ promptId, snapshots }: SnapshotTableProps) {
+export function SnapshotTable({ promptId, workspaceId, snapshots }: SnapshotTableProps) {
     return (
         <Table striped highlightOnHover withTableBorder>
             <Table.Thead>
@@ -30,7 +31,7 @@ export function SnapshotTable({ promptId, snapshots }: SnapshotTableProps) {
                         <Table.Td>
                             <Button
                                 component={Link}
-                                href={`/playground?promptId=${promptId}&snapshotId=${snapshot.id}`}
+                                href={`/workspaces/${workspaceId}/playground?promptId=${promptId}&snapshotId=${snapshot.id}`}
                                 variant="light"
                                 size="xs"
                             >

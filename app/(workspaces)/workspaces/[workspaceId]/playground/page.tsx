@@ -3,8 +3,7 @@
 import React from "react";
 import { Grid, Loader, Stack, Text } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
-import { useWorkspace } from "@/lib/workspace/context";
+import { useSearchParams, useParams } from "next/navigation";
 import { fetchPrompts, fetchRefs, fetchSnapshots } from "@/lib/api/prompts";
 import { fetchApiKeys, fetchModels, fetchVendors } from "@/lib/api/settings";
 import { executeCall } from "@/lib/api/llmCalls";
@@ -13,7 +12,8 @@ import { ExecutePanel } from "@/components/playground/ExecutePanel";
 import { OutputPanel } from "@/components/playground/OutputPanel";
 
 export default function PlaygroundPage() {
-    const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
+    const params = useParams();
+    const workspaceId = params?.workspaceId as string;
     const searchParams = useSearchParams();
     const initialPromptId = searchParams.get("promptId") ?? "";
     const initialSnapshotId = searchParams.get("snapshotId") ?? "";
@@ -45,7 +45,7 @@ export default function PlaygroundPage() {
     });
 
     const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
-        queryKey: ["vendors"],
+        queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
     });
 
@@ -99,7 +99,7 @@ export default function PlaygroundPage() {
         },
     });
 
-    if (workspaceLoading || promptsLoading) {
+    if (promptsLoading) {
         return <Loader />;
     }
 
@@ -139,7 +139,7 @@ export default function PlaygroundPage() {
                 </Stack>
             </Grid.Col>
             <Grid.Col span={{ base: 12, md: 6 }}>
-                <OutputPanel outputText={outputText} callId={callId} />
+                <OutputPanel outputText={outputText} callId={callId} workspaceId={workspaceId} />
             </Grid.Col>
         </Grid>
     );

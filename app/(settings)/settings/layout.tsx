@@ -3,10 +3,9 @@
 import React from "react";
 import { AppShell, Group, Text, Burger, Box } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { AppShellNav } from "@/components/layout/AppShellNav";
-import { HeaderActions } from "@/components/layout/HeaderActions";
+import { SettingsNav } from "@/components/layout/SettingsNav";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
     const [opened, { toggle }] = useDisclosure();
 
     return (
@@ -23,13 +22,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <Text fw={700}>mostPrompt</Text>
+                        <Text fw={700}>Settings</Text>
                     </Group>
-                    <HeaderActions />
                 </Group>
             </AppShell.Header>
             <AppShell.Navbar p="md">
-                <AppShellNav />
+                <SettingsNav />
             </AppShell.Navbar>
             <AppShell.Main>
                 <Box>{children}</Box>

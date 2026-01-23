@@ -7,9 +7,10 @@ import type { Prompt } from "@/lib/api/prompts";
 
 type PromptTableProps = {
     prompts: Prompt[];
+    workspaceId: string;
 };
 
-export function PromptTable({ prompts }: PromptTableProps) {
+export function PromptTable({ prompts, workspaceId }: PromptTableProps) {
     return (
         <Table striped highlightOnHover withTableBorder>
             <Table.Thead>
@@ -23,7 +24,11 @@ export function PromptTable({ prompts }: PromptTableProps) {
                 {prompts.map((prompt) => (
                     <Table.Tr key={prompt.id}>
                         <Table.Td>
-                            <Text component={Link} href={`/prompts/${prompt.id}`} fw={600}>
+                            <Text
+                                component={Link}
+                                href={`/workspaces/${workspaceId}/prompts/${prompt.id}`}
+                                fw={600}
+                            >
                                 {prompt.name}
                             </Text>
                         </Table.Td>

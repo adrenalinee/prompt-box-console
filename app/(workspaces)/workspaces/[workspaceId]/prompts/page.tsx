@@ -4,13 +4,14 @@ import React from "react";
 import { Button, Group, Loader, Stack, Text, TextInput } from "@mantine/core";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { useWorkspace } from "@/lib/workspace/context";
 import { fetchPrompts } from "@/lib/api/prompts";
 import { queryKeys } from "@/lib/query/keys";
 import { PromptTable } from "@/components/prompts/PromptTable";
+import { useParams } from "next/navigation";
 
 export default function PromptsPage() {
-    const { workspaceId, isLoading: workspaceLoading } = useWorkspace();
+    const params = useParams();
+    const workspaceId = params?.workspaceId as string;
     const [search, setSearch] = React.useState("");
 
     const { data, isLoading } = useQuery({
@@ -33,7 +34,7 @@ export default function PromptsPage() {
                 <Text fw={700} size="xl">
                     Prompts
                 </Text>
-                <Button component={Link} href="/prompts/new">
+                <Button component={Link} href={`/workspaces/${workspaceId}/prompts/new`}>
                     새 Prompt
                 </Button>
             </Group>
@@ -42,12 +43,12 @@ export default function PromptsPage() {
                 value={search}
                 onChange={(event) => setSearch(event.currentTarget.value)}
             />
-            {workspaceLoading || isLoading ? (
+            {isLoading ? (
                 <Loader />
             ) : prompts.length === 0 ? (
                 <Text c="dimmed">등록된 Prompt가 없습니다.</Text>
             ) : (
-                <PromptTable prompts={prompts} />
+                <PromptTable prompts={prompts} workspaceId={workspaceId} />
             )}
         </Stack>
     );

@@ -14,8 +14,8 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useWorkspace } from "@/lib/workspace/context";
 import { createApiKey, fetchApiKeys, fetchVendors } from "@/lib/api/settings";
+import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
 
 function maskKey(value?: string) {
@@ -24,10 +24,22 @@ function maskKey(value?: string) {
     return `${value.slice(0, 4)}••••${value.slice(-4)}`;
 }
 
-export default function ApiKeysPage() {
-    const { workspaceId } = useWorkspace();
+export default function SettingsApiKeysPage() {
     const queryClient = useQueryClient();
     const [modalOpen, setModalOpen] = React.useState(false);
+    const [workspaceId, setWorkspaceId] = React.useState<string | null>(null);
+
+    const { data: workspaces = [], isLoading: workspaceLoading } = useQuery({
+        queryKey: queryKeys.workspaces,
+        queryFn: () => fetchWorkspaces(),
+    });
+
+    React.useEffect(() => {
+        if (!workspaceId && workspaces.length > 0) {
+            setWorkspaceId(workspaces[0].id);
+        }
+    }, [workspaceId, workspaces]);
+
     const { data: apiKeys = [], isLoading } = useQuery({
         queryKey: workspaceId ? queryKeys.apiKeys(workspaceId) : [],
         queryFn: () => fetchApiKeys(workspaceId || ""),
@@ -35,7 +47,7 @@ export default function ApiKeysPage() {
     });
 
     const { data: vendors = [] } = useQuery({
-        queryKey: ["vendors"],
+        queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
     });
 
@@ -54,8 +66,7 @@ export default function ApiKeysPage() {
             name?: string;
             value: string;
             description?: string;
-        }) =>
-            createApiKey(workspaceId || "", values),
+        }) => createApiKey(workspaceId || "", values),
         onSuccess: () => {
             if (workspaceId) {
                 queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys(workspaceId) });
@@ -64,6 +75,11 @@ export default function ApiKeysPage() {
             form.reset();
         },
     });
+
+    const workspaceOptions = workspaces.map((workspace) => ({
+        value: workspace.id,
+        label: workspace.name,
+    }));
 
     const vendorOptions = vendors.map((vendor) => ({
         value: vendor.id,
@@ -83,10 +99,20 @@ export default function ApiKeysPage() {
                         form.reset();
                         setModalOpen(true);
                     }}
+                    disabled={!workspaceId}
                 >
                     새 API Key
                 </Button>
             </Group>
+
+            <Select
+                label="Workspace"
+                placeholder="Workspace 선택"
+                data={workspaceOptions}
+                value={workspaceId}
+                onChange={setWorkspaceId}
+                disabled={workspaceLoading}
+            />
 
             {isLoading ? (
                 <Loader />
@@ -96,16 +122,18 @@ export default function ApiKeysPage() {
                 <Table striped highlightOnHover withTableBorder>
                     <Table.Thead>
                         <Table.Tr>
-                        <Table.Th>Vendor</Table.Th>
-                        <Table.Th>Name</Table.Th>
-                        <Table.Th>Key</Table.Th>
-                        <Table.Th>Description</Table.Th>
-                    </Table.Tr>
+                            <Table.Th>Vendor</Table.Th>
+                            <Table.Th>Name</Table.Th>
+                            <Table.Th>Key</Table.Th>
+                            <Table.Th>Description</Table.Th>
+                        </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
                         {apiKeys.map((apiKey) => (
                             <Table.Tr key={apiKey.id}>
-                                <Table.Td>{vendorMap.get(apiKey.vendorId) ?? apiKey.vendorId}</Table.Td>
+                                <Table.Td>
+                                    {vendorMap.get(apiKey.vendorId) ?? apiKey.vendorId}
+                                </Table.Td>
                                 <Table.Td>{apiKey.name ?? "-"}</Table.Td>
                                 <Table.Td>{maskKey()}</Table.Td>
                                 <Table.Td>{apiKey.description ?? "-"}</Table.Td>
@@ -122,11 +150,7 @@ export default function ApiKeysPage() {
                 }}
                 title="API Key 등록"
             >
-                <form
-                    onSubmit={form.onSubmit((values) => {
-                        createMutation.mutate(values);
-                    })}
-                >
+                <form onSubmit={form.onSubmit((values) => createMutation.mutate(values))}>
                     <Stack>
                         <Select
                             label="Vendor"
@@ -135,20 +159,10 @@ export default function ApiKeysPage() {
                             {...form.getInputProps("vendorId")}
                         />
                         <TextInput label="Name" {...form.getInputProps("name")} />
-                        <TextInput
-                            label="API Key"
-                            required
-                            {...form.getInputProps("value")}
-                        />
-                        <TextInput
-                            label="Description"
-                            {...form.getInputProps("description")}
-                        />
+                        <TextInput label="API Key" required {...form.getInputProps("value")} />
+                        <TextInput label="Description" {...form.getInputProps("description")} />
                         <Group justify="flex-end">
-                            <Button
-                                type="submit"
-                                loading={createMutation.isPending}
-                            >
+                            <Button type="submit" loading={createMutation.isPending}>
                                 등록
                             </Button>
                         </Group>
