@@ -128,6 +128,25 @@ export async function fetchWorkspaceApiKeys(
     return response.items;
 }
 
+export async function fetchWorkspaceApiKeysPage(
+    workspaceId: string,
+    vendorId?: string,
+    name?: string,
+    page = 0,
+    size = 50,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    if (vendorId) params.set("vendorId", vendorId);
+    if (name) params.set("name", name);
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<ApiKey>>(
+        `/workspaces/${workspaceId}/llm-api-keys?${params.toString()}`,
+    );
+}
+
 export async function fetchApiKeys(
     filters: { workspaceId?: string; vendorId?: string; name?: string },
     page = 0,
@@ -243,6 +262,25 @@ export async function fetchWorkspaceModels(
         `/workspaces/${workspaceId}/models?${params.toString()}`,
     );
     return response.items;
+}
+
+export async function fetchWorkspaceModelsPage(
+    workspaceId: string,
+    vendorId?: string,
+    page = 0,
+    size = 50,
+    name?: string,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    if (vendorId) params.set("vendorId", vendorId);
+    if (name) params.set("name", name);
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<Model>>(
+        `/workspaces/${workspaceId}/models?${params.toString()}`,
+    );
 }
 
 export async function createModel(payload: {

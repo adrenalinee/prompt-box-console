@@ -5,15 +5,23 @@ import {
     Alert,
     Button,
     Group,
+    NumberInput,
     SegmentedControl,
     Select,
     Stack,
+    Text,
     Textarea,
+    TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { showNotification } from "@mantine/notifications";
 import type { Prompt, PromptRef, Snapshot } from "@/lib/api/prompts";
 import type { ApiKey, Model, Vendor } from "@/lib/api/settings";
+
+type InputItemForm = {
+    role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER";
+    message: string;
+};
 
 export type ExecuteFormValues = {
     sourceType: "REF" | "SNAPSHOT" | "RAW";
@@ -23,7 +31,16 @@ export type ExecuteFormValues = {
     instructions: string;
     modelId: string;
     apiKeyId: string;
-    overrideOptions: string;
+    inputItems: InputItemForm[];
+    overrideOptions: {
+        temperature: number | null;
+        topP: number | null;
+        maxTokens: number | null;
+        textFormat: string;
+        effort: string;
+        verbosity: string;
+        summary: string;
+    };
 };
 
 type ExecutePanelProps = {
@@ -45,7 +62,16 @@ type ExecutePanelProps = {
         instructions?: string;
         modelId: string;
         apiKeyId: string;
-        overrideOptionsJson?: string;
+        inputItems: InputItemForm[];
+        overrideOptions?: {
+            temperature?: number;
+            topP?: number;
+            maxTokens?: number;
+            textFormat?: string;
+            effort?: string;
+            verbosity?: string;
+            summary?: string;
+        };
     }) => void;
     isLoading?: boolean;
 };
@@ -56,18 +82,24 @@ export function ExecutePanel({
     snapshots,
     models,
     apiKeys,
+    vendors,
+    vendorId,
+    onVendorChange,
     initialPromptId,
     initialSnapshotId,
     onPromptChange,
     onExecute,
     isLoading,
 }: ExecutePanelProps) {
+    const safeRefs = Array.isArray(refs) ? refs : [];
+    const safeSnapshots = Array.isArray(snapshots) ? snapshots : [];
+    const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));
     const promptOptions = prompts.map((prompt) => ({ value: prompt.id, label: prompt.name }));
-    const refOptions = refs.map((ref) => ({
+    const refOptions = safeRefs.map((ref) => ({
         value: String(ref.id),
         label: `${ref.name} (${ref.type})`,
     }));
-    const snapshotOptions = snapshots.map((snapshot) => ({
+    const snapshotOptions = safeSnapshots.map((snapshot) => ({
         value: snapshot.id,
         label: snapshot.version ?? snapshot.id,
     }));
@@ -75,7 +107,6 @@ export function ExecutePanel({
         value: String(model.id),
         label: `${vendorMap.get(model.vendorId) ?? model.vendorId} / ${model.modelKey}`,
     }));
-    const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));
     const vendorOptions = vendors.map((vendor) => ({
         value: vendor.id,
         label: vendor.name,
@@ -95,7 +126,16 @@ export function ExecutePanel({
             instructions: "",
             modelId: modelOptions[0]?.value ?? "",
             apiKeyId: apiKeyOptions[0]?.value ?? "",
-            overrideOptions: "",
+            inputItems: [{ role: "USER", message: "" }],
+            overrideOptions: {
+                temperature: null,
+                topP: null,
+                maxTokens: null,
+                textFormat: "",
+                effort: "",
+                verbosity: "",
+                summary: "",
+            },
         },
     });
 
@@ -140,7 +180,7 @@ export function ExecutePanel({
         ) {
             form.setFieldValue("apiKeyId", apiKeyOptions[0].value);
         }
-    }, [refs, snapshots, modelOptions, apiKeyOptions]);
+    }, [safeRefs, safeSnapshots, modelOptions, apiKeyOptions]);
 
     const selectedModel = models.find((model) => String(model.id) === form.values.modelId);
     const selectedKey = apiKeys.find((key) => key.id === form.values.apiKeyId);
@@ -150,20 +190,18 @@ export function ExecutePanel({
     return (
         <form
             onSubmit={form.onSubmit((values) => {
-                let overrideOptionsJson: string | undefined;
-                if (values.overrideOptions.trim().length > 0) {
-                    try {
-                        JSON.parse(values.overrideOptions);
-                        overrideOptionsJson = values.overrideOptions;
-                    } catch {
-                        showNotification({
-                            color: "red",
-                            title: "JSON 오류",
-                            message: "overrideOptions JSON 형식이 올바르지 않습니다.",
-                        });
-                        return;
-                    }
-                }
+                const options = {
+                    temperature: values.overrideOptions.temperature ?? undefined,
+                    topP: values.overrideOptions.topP ?? undefined,
+                    maxTokens: values.overrideOptions.maxTokens ?? undefined,
+                    textFormat: values.overrideOptions.textFormat || undefined,
+                    effort: values.overrideOptions.effort || undefined,
+                    verbosity: values.overrideOptions.verbosity || undefined,
+                    summary: values.overrideOptions.summary || undefined,
+                };
+                const hasOptions = Object.values(options).some(
+                    (value) => value !== undefined,
+                );
 
                 onExecute({
                     sourceType: values.sourceType,
@@ -172,7 +210,8 @@ export function ExecutePanel({
                     instructions: values.instructions || undefined,
                     modelId: values.modelId,
                     apiKeyId: values.apiKeyId,
-                    overrideOptionsJson,
+                    inputItems: values.inputItems,
+                    overrideOptions: hasOptions ? options : undefined,
                 });
             })}
         >
@@ -224,7 +263,7 @@ export function ExecutePanel({
                     label="Vendor"
                     data={vendorOptions}
                     placeholder="Vendor 선택"
-                    value={vendorId}
+                    value={vendorId ?? null}
                     onChange={onVendorChange}
                     clearable
                 />
@@ -249,12 +288,97 @@ export function ExecutePanel({
                     </Alert>
                 )}
 
-                <Textarea
-                    label="overrideOptions (JSON)"
-                    minRows={4}
-                    autosize
-                    {...form.getInputProps("overrideOptions")}
-                />
+                <Stack gap="xs">
+                    <Group justify="space-between">
+                        <Text fw={600}>Input Items</Text>
+                        <Button
+                            size="xs"
+                            variant="light"
+                            onClick={() =>
+                                form.insertListItem("inputItems", {
+                                    role: "USER",
+                                    message: "",
+                                })
+                            }
+                        >
+                            입력 추가
+                        </Button>
+                    </Group>
+                    {form.values.inputItems.map((item, index) => (
+                        <Group key={`input-${index}`} align="flex-start">
+                            <Select
+                                label="Role"
+                                data={[
+                                    { value: "USER", label: "USER" },
+                                    { value: "ASSISTANT", label: "ASSISTANT" },
+                                    { value: "SYSTEM", label: "SYSTEM" },
+                                    { value: "DEVELOPER", label: "DEVELOPER" },
+                                ]}
+                                w={150}
+                                {...form.getInputProps(`inputItems.${index}.role`)}
+                            />
+                            <Textarea
+                                label="Message"
+                                minRows={2}
+                                className="flex-1"
+                                {...form.getInputProps(`inputItems.${index}.message`)}
+                            />
+                            <Button
+                                mt={24}
+                                variant="subtle"
+                                color="red"
+                                onClick={() => form.removeListItem("inputItems", index)}
+                                disabled={form.values.inputItems.length === 1}
+                            >
+                                삭제
+                            </Button>
+                        </Group>
+                    ))}
+                </Stack>
+
+                <Stack gap="xs">
+                    <Text fw={600}>Override Options</Text>
+                    <Group grow>
+                        <TextInput
+                            label="Text Format"
+                            placeholder="예: markdown"
+                            {...form.getInputProps("overrideOptions.textFormat")}
+                        />
+                        <TextInput
+                            label="Effort"
+                            placeholder="예: low"
+                            {...form.getInputProps("overrideOptions.effort")}
+                        />
+                        <TextInput
+                            label="Verbosity"
+                            placeholder="예: low"
+                            {...form.getInputProps("overrideOptions.verbosity")}
+                        />
+                    </Group>
+                    <Group grow>
+                        <TextInput
+                            label="Summary"
+                            placeholder="예: short"
+                            {...form.getInputProps("overrideOptions.summary")}
+                        />
+                        <NumberInput
+                            label="Temperature"
+                            decimalScale={2}
+                            min={0}
+                            {...form.getInputProps("overrideOptions.temperature")}
+                        />
+                        <NumberInput
+                            label="Top P"
+                            min={0}
+                            {...form.getInputProps("overrideOptions.topP")}
+                        />
+                        <NumberInput
+                            label="Max Tokens"
+                            min={0}
+                            {...form.getInputProps("overrideOptions.maxTokens")}
+                        />
+                    </Group>
+                </Stack>
 
                 <Group justify="flex-end">
                     <Button type="submit" loading={isLoading}>

@@ -1,35 +1,43 @@
 "use client";
 
 import React from "react";
-import { Group, Loader, Select, Stack, Text } from "@mantine/core";
+import {
+    ActionIcon,
+    Button,
+    Group,
+    Loader,
+    Menu,
+    Pagination,
+    Select,
+    Stack,
+    Table,
+    Text,
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { fetchLogs } from "@/lib/api/llmCalls";
+import { fetchLogsPage } from "@/lib/api/llmCalls";
 import { fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
-import { LogTable } from "@/components/logs/LogTable";
-import { useParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { IconDotsVertical } from "@tabler/icons-react";
 
 export default function LogsPage() {
     const params = useParams();
     const workspaceId = params?.workspaceId as string;
-    const [modelId, setModelId] = React.useState<string | null>(null);
-    const [status, setStatus] = React.useState<string | null>(null);
-    const [vendorId, setVendorId] = React.useState<string | null>(null);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const vendorId = searchParams.get("vendorId") ?? "";
+    const modelId = searchParams.get("modelId") ?? "";
+    const status = searchParams.get("status") ?? "";
+    const page = Number(searchParams.get("page") || "1");
+    const size = Number(searchParams.get("size") || "20");
+    const sort = searchParams.get("sort") || "";
 
     const { data: vendors = [] } = useQuery({
         queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
     });
-
-    React.useEffect(() => {
-        if (!vendorId && vendors.length > 0) {
-            setVendorId(vendors[0].id);
-        }
-    }, [vendors, vendorId]);
-
-    React.useEffect(() => {
-        setModelId(null);
-    }, [vendorId]);
 
     const { data: models = [] } = useQuery({
         queryKey: workspaceId
@@ -39,17 +47,40 @@ export default function LogsPage() {
         enabled: !!workspaceId,
     });
 
-    const filters = React.useMemo(
-        () => ({
-            modelId,
-            status,
-        }),
-        [modelId, status],
+    const updateParam = React.useCallback(
+        (key: string, value?: string | null) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (!value) {
+                params.delete(key);
+            } else {
+                params.set(key, value);
+            }
+            if (key !== "page") {
+                params.set("page", "1");
+            }
+            router.replace(`${pathname}?${params.toString()}`);
+        },
+        [searchParams, router, pathname],
     );
 
-    const { data: logs = [], isLoading } = useQuery({
-        queryKey: workspaceId ? queryKeys.logs(workspaceId, filters) : [],
-        queryFn: () => fetchLogs(workspaceId || "", filters),
+    const { data: pageData, isLoading } = useQuery({
+        queryKey: [
+            ...queryKeys.logs(workspaceId, { modelId, status }),
+            page,
+            size,
+            sort,
+        ],
+        queryFn: () =>
+            fetchLogsPage(
+                workspaceId,
+                {
+                    modelId: modelId || undefined,
+                    status: status || undefined,
+                },
+                page - 1,
+                size,
+                sort || undefined,
+            ),
         enabled: !!workspaceId,
     });
 
@@ -77,16 +108,16 @@ export default function LogsPage() {
                     label="Vendor"
                     placeholder="전체"
                     data={vendorOptions}
-                    value={vendorId}
-                    onChange={setVendorId}
+                    value={vendorId || null}
+                    onChange={(value) => updateParam("vendorId", value)}
                     clearable
                 />
                 <Select
                     label="Model"
                     placeholder="전체"
                     data={modelOptions}
-                    value={modelId}
-                    onChange={setModelId}
+                    value={modelId || null}
+                    onChange={(value) => updateParam("modelId", value)}
                     clearable
                 />
                 <Select
@@ -98,18 +129,97 @@ export default function LogsPage() {
                         { value: "TIMEOUT", label: "TIMEOUT" },
                         { value: "CANCELLED", label: "CANCELLED" },
                     ]}
-                    value={status}
-                    onChange={setStatus}
+                    value={status || null}
+                    onChange={(value) => updateParam("status", value)}
+                    clearable
+                />
+                <Select
+                    label="Sort"
+                    data={[
+                        { value: "id,desc", label: "ID ↓" },
+                        { value: "id,asc", label: "ID ↑" },
+                    ]}
+                    value={sort || null}
+                    onChange={(value) => updateParam("sort", value)}
                     clearable
                 />
             </Group>
             {isLoading ? (
                 <Loader />
-            ) : logs.length === 0 ? (
+            ) : (pageData?.items ?? []).length === 0 ? (
                 <Text c="dimmed">로그가 없습니다.</Text>
             ) : (
-                <LogTable logs={logs} workspaceId={workspaceId} />
+                <Table striped highlightOnHover withTableBorder>
+                    <Table.Thead>
+                        <Table.Tr>
+                            <Table.Th>ID</Table.Th>
+                            <Table.Th>Model</Table.Th>
+                            <Table.Th>Status</Table.Th>
+                            <Table.Th>Elapsed</Table.Th>
+                            <Table.Th>Error</Table.Th>
+                            <Table.Th ta="right">Actions</Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {(pageData?.items ?? []).map((log) => (
+                            <Table.Tr key={log.id}>
+                                <Table.Td>{log.id}</Table.Td>
+                                <Table.Td>{log.llmModelId ?? "-"}</Table.Td>
+                                <Table.Td>{log.status ?? "-"}</Table.Td>
+                                <Table.Td>{log.elapsed ?? "-"}</Table.Td>
+                                <Table.Td>{log.errorMessage ?? "-"}</Table.Td>
+                                <Table.Td ta="right">
+                                    <Group gap="xs" justify="flex-end">
+                                        <Button
+                                            size="xs"
+                                            variant="light"
+                                            onClick={() =>
+                                                router.push(
+                                                    `/workspaces/${workspaceId}/logs/${log.id}`,
+                                                )
+                                            }
+                                        >
+                                            상세
+                                        </Button>
+                                        <Menu shadow="md" position="bottom-end">
+                                            <Menu.Target>
+                                                <ActionIcon variant="light">
+                                                    <IconDotsVertical size={16} />
+                                                </ActionIcon>
+                                            </Menu.Target>
+                                            <Menu.Dropdown>
+                                                <Menu.Item disabled>수정</Menu.Item>
+                                                <Menu.Item disabled>삭제</Menu.Item>
+                                            </Menu.Dropdown>
+                                        </Menu>
+                                    </Group>
+                                </Table.Td>
+                            </Table.Tr>
+                        ))}
+                    </Table.Tbody>
+                </Table>
             )}
+            <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                    Total {pageData?.totalElements ?? 0}
+                </Text>
+                <Group>
+                    <Pagination
+                        total={pageData?.totalPages ?? 1}
+                        value={page}
+                        onChange={(value) => updateParam("page", String(value))}
+                    />
+                    <Select
+                        data={[
+                            { value: "10", label: "10 / page" },
+                            { value: "20", label: "20 / page" },
+                            { value: "50", label: "50 / page" },
+                        ]}
+                        value={String(size)}
+                        onChange={(value) => updateParam("size", value)}
+                    />
+                </Group>
+            </Group>
         </Stack>
     );
 }

@@ -7,8 +7,16 @@ export type ExecutePayload = {
     promptSnapshotId?: string;
     promptRefId?: number | string;
     rawInstructionsText?: string;
-    additionalUserInputText?: string;
-    overrideOptionsJson?: string;
+    inputItems: { role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER"; message: string }[];
+    overrideOptions?: {
+        temperature?: number;
+        topP?: number;
+        maxTokens?: number;
+        textFormat?: string;
+        effort?: string;
+        verbosity?: string;
+        summary?: string;
+    };
 };
 
 export type ExecuteResult = {
@@ -63,6 +71,25 @@ export async function fetchLogs(
         `/workspaces/${workspaceId}/llm-calls${query ? `?${query}` : ""}`,
     );
     return response.items;
+}
+
+export async function fetchLogsPage(
+    workspaceId: string,
+    filters: { modelId?: string; status?: string },
+    page = 0,
+    size = 50,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    if (filters.modelId) params.set("modelId", String(filters.modelId));
+    if (filters.status) params.set("status", String(filters.status));
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (sort) params.set("sort", sort);
+
+    return apiFetch<PageResponse<CallLog>>(
+        `/workspaces/${workspaceId}/llm-calls?${params.toString()}`,
+    );
 }
 
 export async function fetchAllLogs(

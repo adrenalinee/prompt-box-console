@@ -70,7 +70,7 @@ export default function SettingsLogsPage() {
 
     const { data: pageData, isLoading } = useQuery({
         queryKey: [
-            queryKeys.logsAll({ workspaceId, modelId, status }),
+            ...queryKeys.logsAll({ workspaceId, modelId, status }),
             page,
             size,
             sort,

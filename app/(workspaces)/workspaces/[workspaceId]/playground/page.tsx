@@ -82,7 +82,16 @@ export default function PlaygroundPage() {
             instructions?: string;
             modelId: string;
             apiKeyId: string;
-            overrideOptionsJson?: string;
+            inputItems: { role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER"; message: string }[];
+            overrideOptions?: {
+                temperature?: number;
+                topP?: number;
+                maxTokens?: number;
+                textFormat?: string;
+                effort?: string;
+                verbosity?: string;
+                summary?: string;
+            };
         }) =>
             executeCall({
                 workspaceId: workspaceId || "",
@@ -93,7 +102,8 @@ export default function PlaygroundPage() {
                 promptRefId: payload.sourceType === "REF" ? payload.refId : undefined,
                 rawInstructionsText:
                     payload.sourceType === "RAW" ? payload.instructions : undefined,
-                overrideOptionsJson: payload.overrideOptionsJson,
+                inputItems: payload.inputItems,
+                overrideOptions: payload.overrideOptions,
             }),
         onSuccess: (result) => {
             setOutputText("");

@@ -16,6 +16,12 @@ export type Snapshot = {
     version?: number;
 };
 
+export type AdditionalInput = {
+    position: number;
+    role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER";
+    message: string;
+};
+
 export type PromptRef = {
     id: number;
     promptId: string;
@@ -30,6 +36,23 @@ export async function fetchPrompts(workspaceId: string, page = 0, size = 50) {
         `/workspaces/${workspaceId}/prompts?page=${page}&size=${size}`,
     );
     return response.items;
+}
+
+export async function fetchPromptsPage(
+    workspaceId: string,
+    page = 0,
+    size = 50,
+    name?: string,
+    sort?: string,
+) {
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("size", String(size));
+    if (name) params.set("name", name);
+    if (sort) params.set("sort", sort);
+    return apiFetch<PageResponse<Prompt>>(
+        `/workspaces/${workspaceId}/prompts?${params.toString()}`,
+    );
 }
 
 export async function fetchAllPrompts(
@@ -66,11 +89,24 @@ export async function fetchAllPromptsPage(
 
 export async function createPrompt(
     workspaceId: string,
-    payload: { name: string; instructions: string; description?: string; mainRefName?: string },
+    payload: {
+        name: string;
+        instructions: string;
+        description?: string;
+        mainRefName?: string;
+        additionalInputs?: AdditionalInput[];
+    },
 ) {
+    const mainRefName = payload.mainRefName?.trim() || "main";
+    const additionalInputs = payload.additionalInputs ?? [];
     return apiFetch<Prompt>(`/prompts`, {
         method: "POST",
-        body: JSON.stringify({ ...payload, workspaceId }),
+        body: JSON.stringify({
+            ...payload,
+            workspaceId,
+            mainRefName,
+            additionalInputs,
+        }),
     });
 }
 
@@ -94,8 +130,11 @@ export async function deletePrompt(promptId: string) {
     });
 }
 
-export async function fetchSnapshots(promptId: string) {
-    return apiFetch<Snapshot[]>(`/prompts/${promptId}/snapshots`);
+export async function fetchSnapshots(promptId: string, page = 0, size = 50) {
+    const response = await apiFetch<PageResponse<Snapshot>>(
+        `/prompts/${promptId}/snapshots?page=${page}&size=${size}`,
+    );
+    return response.items;
 }
 
 export async function createSnapshot(
@@ -108,8 +147,11 @@ export async function createSnapshot(
     });
 }
 
-export async function fetchRefs(promptId: string) {
-    return apiFetch<PromptRef[]>(`/prompts/${promptId}/refs`);
+export async function fetchRefs(promptId: string, page = 0, size = 50) {
+    const response = await apiFetch<PageResponse<PromptRef>>(
+        `/prompts/${promptId}/refs?page=${page}&size=${size}`,
+    );
+    return response.items;
 }
 
 export async function createRef(

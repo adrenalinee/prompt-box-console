@@ -8,6 +8,7 @@ import { HeaderActions } from "@/components/layout/HeaderActions";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -42,7 +43,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <Text fw={700}>mostPrompt</Text>
+                        <Text fw={700} component={Link} href="/" className="hover:opacity-80">
+                            mostPrompt
+                        </Text>
                         <Select
                             data={workspaceOptions}
                             value={workspaceId}
