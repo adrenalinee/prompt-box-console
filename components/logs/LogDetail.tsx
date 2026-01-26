@@ -36,6 +36,20 @@ export function LogDetail({ log }: LogDetailProps) {
 
             <Paper p="md" withBorder>
                 <Group justify="space-between" mb="xs">
+                    <Text fw={600}>Instructions</Text>
+                    <CopyButton value={callLog.instructions ?? ""}>
+                        {({ copied, copy }) => (
+                            <Text onClick={copy} c={copied ? "teal" : "blue"} style={{ cursor: "pointer" }}>
+                                {copied ? "Copied" : "Copy"}
+                            </Text>
+                        )}
+                    </CopyButton>
+                </Group>
+                <CodeHighlight code={callLog.instructions ?? ""} language="text" />
+            </Paper>
+
+            <Paper p="md" withBorder>
+                <Group justify="space-between" mb="xs">
                     <Text fw={600}>Input Items</Text>
                     <CopyButton value={renderJson(log.inputItems)}>
                         {({ copied, copy }) => (

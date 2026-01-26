@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 
-export default function WorkspaceHome({
+export default async function WorkspaceHome({
     params,
 }: {
-    params: { workspaceId: string };
+    params: Promise<{ workspaceId: string }>;
 }) {
-    redirect(`/workspaces/${params.workspaceId}/playground`);
+    const { workspaceId } = await params;
+    redirect(`/workspaces/${workspaceId}/playground`);
 }

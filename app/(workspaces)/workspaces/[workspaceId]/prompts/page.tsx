@@ -114,7 +114,8 @@ export default function PromptsPage() {
                     <Table.Thead>
                         <Table.Tr>
                             <Table.Th>Name</Table.Th>
-                            <Table.Th>Latest Ref ID</Table.Th>
+                            <Table.Th>Default Branch Ref</Table.Th>
+                            <Table.Th>Latest Tag Ref</Table.Th>
                             <Table.Th>Description</Table.Th>
                             <Table.Th ta="right">Actions</Table.Th>
                         </Table.Tr>
@@ -123,7 +124,8 @@ export default function PromptsPage() {
                         {items.map((prompt) => (
                             <Table.Tr key={prompt.id}>
                                 <Table.Td>{prompt.name}</Table.Td>
-                                <Table.Td>{prompt.latestRefId ?? "-"}</Table.Td>
+                                <Table.Td>{prompt.defaultBranchRefId ?? "-"}</Table.Td>
+                                <Table.Td>{prompt.latestTagRefId ?? "-"}</Table.Td>
                                 <Table.Td>{prompt.description ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">

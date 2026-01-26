@@ -14,10 +14,11 @@ export function PromptTable({ prompts, workspaceId }: PromptTableProps) {
     return (
         <Table striped highlightOnHover withTableBorder>
             <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>이름</Table.Th>
-                        <Table.Th>Latest Ref ID</Table.Th>
-                        <Table.Th>Description</Table.Th>
+                <Table.Tr>
+                    <Table.Th>이름</Table.Th>
+                    <Table.Th>Default Branch Ref</Table.Th>
+                    <Table.Th>Latest Tag Ref</Table.Th>
+                    <Table.Th>Description</Table.Th>
                 </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -36,7 +37,8 @@ export function PromptTable({ prompts, workspaceId }: PromptTableProps) {
                                 <Text fw={600}>{prompt.name}</Text>
                             )}
                         </Table.Td>
-                        <Table.Td>{prompt.latestRefId ?? "-"}</Table.Td>
+                        <Table.Td>{prompt.defaultBranchRefId ?? "-"}</Table.Td>
+                        <Table.Td>{prompt.latestTagRefId ?? "-"}</Table.Td>
                         <Table.Td>{prompt.description ?? "-"}</Table.Td>
                     </Table.Tr>
                 ))}

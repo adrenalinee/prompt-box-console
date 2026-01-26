@@ -4,7 +4,6 @@ export type ExecutePayload = {
     workspaceId: string;
     llmModelId: number | string;
     llmApiKeyId: string;
-    promptSnapshotId?: string;
     promptRefId?: number | string;
     rawInstructionsText?: string;
     inputItems: { role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER"; message: string }[];
@@ -28,13 +27,13 @@ export type CallLog = {
     workspaceId?: string;
     llmModelId?: number;
     llmApiKeyId?: string;
-    promptSnapshotId?: string;
     promptRefId?: number;
     elapsed?: number;
     status?: "SUCCESS" | "ERROR" | "TIMEOUT" | "CANCELLED";
     errorCode?: string;
     errorMessage?: string;
     llmCallOptions?: string;
+    instructions?: string;
 };
 
 export type CallLogDetail = {

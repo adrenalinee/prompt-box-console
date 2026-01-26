@@ -32,6 +32,7 @@ async function parseJsonSafe(response: Response) {
 export async function apiFetch<T>(
     path: string,
     options: RequestInit = {},
+    config: { suppressNotification?: boolean } = {},
 ): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, {
         ...options,
@@ -49,7 +50,7 @@ export async function apiFetch<T>(
             message: body?.message || response.statusText || "요청에 실패했습니다.",
         };
 
-        if (typeof window !== "undefined") {
+        if (typeof window !== "undefined" && !config.suppressNotification) {
             showNotification({
                 color: "red",
                 title: `오류 ${error.status}`,

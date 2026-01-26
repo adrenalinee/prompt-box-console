@@ -1,58 +1,47 @@
 "use client";
 
 import React from "react";
-import {
-    Button,
-    Group,
-    Modal,
-    Select,
-    Stack,
-    Table,
-    Text,
-    TextInput,
-} from "@mantine/core";
+import { Button, Group, Modal, Select, Stack, Table, Text, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import type { PromptRef, Snapshot } from "@/lib/api/prompts";
+import type { PromptRef } from "@/lib/api/prompts";
 
 type RefTableProps = {
     refs: PromptRef[];
-    snapshots: Snapshot[];
     onCreate: (payload: {
         name: string;
         type: "BRANCH" | "TAG";
-        promptSnapshotId: string;
+        fromRefId: number;
     }) => void;
-    onMove: (payload: { refId: number; promptSnapshotId: string }) => void;
+    defaultBranchRefId?: number;
 };
 
-export function RefTable({ refs, snapshots, onCreate, onMove }: RefTableProps) {
+export function RefTable({ refs, onCreate, defaultBranchRefId }: RefTableProps) {
     const [createOpened, setCreateOpened] = React.useState(false);
-    const [moveTarget, setMoveTarget] = React.useState<PromptRef | null>(null);
 
-    const snapshotOptions = snapshots.map((snapshot) => ({
-        value: snapshot.id,
-        label: snapshot.version ?? snapshot.id,
+    const refOptions = refs.map((ref) => ({
+        value: String(ref.id),
+        label: `${ref.name} (${ref.type})`,
     }));
 
     const createForm = useForm({
         initialValues: {
             name: "",
             type: "BRANCH" as "BRANCH" | "TAG",
-            promptSnapshotId: snapshotOptions[0]?.value ?? "",
+            fromRefId: refOptions[0]?.value ?? "",
         },
     });
 
-    const moveForm = useForm({
-        initialValues: {
-            promptSnapshotId: snapshotOptions[0]?.value ?? "",
-        },
-    });
+    React.useEffect(() => {
+        if (refOptions.length && !refOptions.find((opt) => opt.value === createForm.values.fromRefId)) {
+            createForm.setFieldValue("fromRefId", refOptions[0].value);
+        }
+    }, [refOptions]);
 
     return (
         <>
             <Group justify="space-between" mb="sm">
                 <Text fw={600}>Refs</Text>
-                <Button onClick={() => setCreateOpened(true)} size="xs">
+                <Button onClick={() => setCreateOpened(true)} size="xs" disabled={refs.length === 0}>
                     새 Ref
                 </Button>
             </Group>
@@ -61,33 +50,35 @@ export function RefTable({ refs, snapshots, onCreate, onMove }: RefTableProps) {
                     <Table.Tr>
                         <Table.Th>이름</Table.Th>
                         <Table.Th>타입</Table.Th>
-                        <Table.Th>Snapshot</Table.Th>
+                        <Table.Th>Instructions</Table.Th>
                         <Table.Th>Actions</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
                     {refs.map((ref) => (
-                        <Table.Tr key={`${ref.type}-${ref.name}`}>
+                        <Table.Tr key={ref.id}>
                             <Table.Td>{ref.name}</Table.Td>
-                            <Table.Td>{ref.type}</Table.Td>
-                            <Table.Td>{ref.promptSnapshotId}</Table.Td>
                             <Table.Td>
-                                {ref.type === "BRANCH" ? (
-                                    <Button
-                                        size="xs"
-                                        variant="light"
-                                        onClick={() => {
-                                            setMoveTarget(ref);
-                                            moveForm.setValues({
-                                                promptSnapshotId: snapshotOptions[0]?.value ?? "",
-                                            });
-                                        }}
-                                    >
-                                        Move
-                                    </Button>
-                                ) : (
+                                {ref.type}
+                                {ref.id === defaultBranchRefId && (
+                                    <Text size="xs" c="dimmed">
+                                        기본 브랜치
+                                    </Text>
+                                )}
+                            </Table.Td>
+                            <Table.Td>
+                                <Text size="sm" lineClamp={2}>
+                                    {ref.instructions || "-"}
+                                </Text>
+                            </Table.Td>
+                            <Table.Td>
+                                {ref.type === "TAG" ? (
                                     <Text size="sm" c="dimmed">
                                         TAG는 고정
+                                    </Text>
+                                ) : (
+                                    <Text size="sm" c="dimmed">
+                                        Editor에서 수정
                                     </Text>
                                 )}
                             </Table.Td>
@@ -99,7 +90,11 @@ export function RefTable({ refs, snapshots, onCreate, onMove }: RefTableProps) {
             <Modal opened={createOpened} onClose={() => setCreateOpened(false)} title="Ref 생성">
                 <form
                     onSubmit={createForm.onSubmit((values) => {
-                        onCreate(values);
+                        onCreate({
+                            name: values.name,
+                            type: values.type,
+                            fromRefId: Number(values.fromRefId),
+                        });
                         setCreateOpened(false);
                         createForm.reset();
                     })}
@@ -115,42 +110,20 @@ export function RefTable({ refs, snapshots, onCreate, onMove }: RefTableProps) {
                             {...createForm.getInputProps("type")}
                         />
                         <Select
-                            label="Snapshot"
-                            data={snapshotOptions}
-                            {...createForm.getInputProps("promptSnapshotId")}
+                            label="기준 Ref"
+                            data={refOptions}
+                            placeholder="기준 Ref 선택"
+                            {...createForm.getInputProps("fromRefId")}
                         />
+                        {refs.length === 0 && (
+                            <Text size="sm" c="dimmed">
+                                기준 Ref가 없어서 새 Ref를 만들 수 없습니다.
+                            </Text>
+                        )}
                         <Group justify="flex-end">
-                            <Button type="submit">생성</Button>
-                        </Group>
-                    </Stack>
-                </form>
-            </Modal>
-
-            <Modal
-                opened={!!moveTarget}
-                onClose={() => setMoveTarget(null)}
-                title="브랜치 이동"
-            >
-                <form
-                    onSubmit={moveForm.onSubmit((values) => {
-                        if (moveTarget) {
-                            onMove({
-                                refId: moveTarget.id,
-                                promptSnapshotId: values.promptSnapshotId,
-                            });
-                        }
-                        setMoveTarget(null);
-                    })}
-                >
-                    <Stack>
-                        <Text>{moveTarget?.name}</Text>
-                        <Select
-                            label="Snapshot"
-                            data={snapshotOptions}
-                            {...moveForm.getInputProps("promptSnapshotId")}
-                        />
-                        <Group justify="flex-end">
-                            <Button type="submit">이동</Button>
+                            <Button type="submit" disabled={refs.length === 0}>
+                                생성
+                            </Button>
                         </Group>
                     </Stack>
                 </form>

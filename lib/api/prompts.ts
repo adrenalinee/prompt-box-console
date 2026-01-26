@@ -5,16 +5,11 @@ export type Prompt = {
     name: string;
     description?: string;
     workspaceId?: string;
-    latestRefId?: number;
+    defaultBranchRefId?: number;
+    latestTagRefId?: number;
 };
 
 export type PromptDetail = Prompt;
-
-export type Snapshot = {
-    id: string;
-    instructions: string;
-    version?: number;
-};
 
 export type AdditionalInput = {
     position: number;
@@ -27,8 +22,15 @@ export type PromptRef = {
     promptId: string;
     name: string;
     type: "BRANCH" | "TAG";
-    promptSnapshotId: string;
+    instructions: string;
     description?: string;
+};
+
+export type AdditionalInputItem = {
+    id: number;
+    position: number;
+    role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER";
+    message: string;
 };
 
 export async function fetchPrompts(workspaceId: string, page = 0, size = 50) {
@@ -130,23 +132,6 @@ export async function deletePrompt(promptId: string) {
     });
 }
 
-export async function fetchSnapshots(promptId: string, page = 0, size = 50) {
-    const response = await apiFetch<PageResponse<Snapshot>>(
-        `/prompts/${promptId}/snapshots?page=${page}&size=${size}`,
-    );
-    return response.items;
-}
-
-export async function createSnapshot(
-    promptId: string,
-    payload: { instructions: string; additionalInputs?: unknown[] },
-) {
-    return apiFetch<Snapshot>(`/prompts/${promptId}/snapshots`, {
-        method: "POST",
-        body: JSON.stringify(payload),
-    });
-}
-
 export async function fetchRefs(promptId: string, page = 0, size = 50) {
     const response = await apiFetch<PageResponse<PromptRef>>(
         `/prompts/${promptId}/refs?page=${page}&size=${size}`,
@@ -156,7 +141,7 @@ export async function fetchRefs(promptId: string, page = 0, size = 50) {
 
 export async function createRef(
     promptId: string,
-    payload: { name: string; type: "BRANCH" | "TAG"; promptSnapshotId: string; description?: string },
+    payload: { name: string; type: "BRANCH" | "TAG"; fromRefId: number; description?: string },
 ) {
     return apiFetch<PromptRef>(`/prompts/${promptId}/refs`, {
         method: "POST",
@@ -164,13 +149,68 @@ export async function createRef(
     });
 }
 
-export async function moveRef(
+export async function updateRef(
     promptId: string,
     refId: number,
-    payload: { promptSnapshotId: string },
+    payload: { name?: string; description?: string; instructions?: string },
 ) {
     return apiFetch<PromptRef>(`/prompts/${promptId}/refs/${refId}`, {
         method: "PATCH",
         body: JSON.stringify(payload),
     });
+}
+
+export async function deleteRef(promptId: string, refId: number) {
+    return apiFetch<void>(`/prompts/${promptId}/refs/${refId}`, {
+        method: "DELETE",
+    });
+}
+
+export async function fetchAdditionalInputs(promptId: string, refId: number, page = 0, size = 50) {
+    const response = await apiFetch<PageResponse<AdditionalInputItem>>(
+        `/prompts/${promptId}/refs/${refId}/additional-input-items?page=${page}&size=${size}`,
+    );
+    return response.items;
+}
+
+export async function addAdditionalInput(
+    promptId: string,
+    refId: number,
+    payload: { position?: number; role: AdditionalInputItem["role"]; message: string },
+) {
+    return apiFetch<AdditionalInputItem>(
+        `/prompts/${promptId}/refs/${refId}/additional-input-items`,
+        {
+            method: "POST",
+            body: JSON.stringify(payload),
+        },
+    );
+}
+
+export async function updateAdditionalInput(
+    promptId: string,
+    refId: number,
+    additionalInputItemId: number,
+    payload: { position?: number; role: AdditionalInputItem["role"]; message: string },
+) {
+    return apiFetch<AdditionalInputItem>(
+        `/prompts/${promptId}/refs/${refId}/additional-input-items/${additionalInputItemId}`,
+        {
+            method: "PATCH",
+            body: JSON.stringify(payload),
+        },
+    );
+}
+
+export async function deleteAdditionalInput(
+    promptId: string,
+    refId: number,
+    additionalInputItemId: number,
+) {
+    return apiFetch<void>(
+        `/prompts/${promptId}/refs/${refId}/additional-input-items/${additionalInputItemId}`,
+        {
+            method: "DELETE",
+        },
+    );
 }

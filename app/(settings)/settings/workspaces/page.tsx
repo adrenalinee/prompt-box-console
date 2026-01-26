@@ -14,17 +14,21 @@ import {
     Table,
     Text,
     TextInput,
+    NumberInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconDotsVertical } from "@tabler/icons-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CodeHighlight } from "@mantine/code-highlight";
+import { showNotification } from "@mantine/notifications";
 import {
     createWorkspace,
     deleteWorkspace,
+    fetchDefaultOptions,
     fetchWorkspace,
     fetchWorkspacesPage,
+    upsertDefaultOptions,
     updateWorkspace,
 } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
@@ -40,6 +44,10 @@ export default function WorkspacesPage() {
         id: string;
         name: string;
         description?: string;
+    } | null>(null);
+    const [defaultOptionsTarget, setDefaultOptionsTarget] = React.useState<{
+        id: string;
+        name: string;
     } | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name: string } | null>(
         null,
@@ -74,8 +82,8 @@ export default function WorkspacesPage() {
     });
 
     const { data: detail } = useQuery({
-        queryKey: detailId ? ["workspace", detailId] : [],
-        queryFn: () => fetchWorkspace(detailId),
+        queryKey: detailId ? ["workspace", detailId, "defaultOptions"] : [],
+        queryFn: () => fetchWorkspace(detailId, true),
         enabled: !!detailId,
     });
 
@@ -111,6 +119,39 @@ export default function WorkspacesPage() {
         },
     });
 
+    const defaultOptionsForm = useForm({
+        initialValues: {
+            temperature: "" as number | "",
+            topP: "" as number | "",
+            maxTokens: "" as number | "",
+            textFormat: "",
+            effort: "",
+            verbosity: "",
+            summary: "",
+        },
+    });
+
+    const defaultOptionsMutation = useMutation({
+        mutationFn: (values: {
+            temperature?: number;
+            topP?: number;
+            maxTokens?: number;
+            textFormat?: string;
+            effort?: string;
+            verbosity?: string;
+            summary?: string;
+        }) => upsertDefaultOptions(defaultOptionsTarget?.id || "", values),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
+            if (defaultOptionsTarget?.id) {
+                queryClient.invalidateQueries({
+                    queryKey: ["workspace", defaultOptionsTarget.id, "defaultOptions"],
+                });
+            }
+            setDefaultOptionsTarget(null);
+        },
+    });
+
     const deleteMutation = useMutation({
         mutationFn: (workspaceId: string) => deleteWorkspace(workspaceId),
         onSuccess: () => {
@@ -119,6 +160,8 @@ export default function WorkspacesPage() {
     });
 
     const items = pageData?.items ?? [];
+    const resolveWorkspaceId = (workspace: { id?: string; workspaceId?: string }) =>
+        workspace.id ?? workspace.workspaceId ?? "";
 
     return (
         <Stack>
@@ -178,7 +221,25 @@ export default function WorkspacesPage() {
                                         <Button
                                             size="xs"
                                             variant="light"
-                                            onClick={() => updateParam("detail", workspace.id)}
+                                            onClick={() => {
+                                                const targetId = resolveWorkspaceId(workspace);
+                                                if (!targetId) {
+                                                    showNotification({
+                                                        color: "red",
+                                                        title: "이동 실패",
+                                                        message: "workspaceId를 찾을 수 없습니다.",
+                                                    });
+                                                    return;
+                                                }
+                                                router.push(`/workspaces/${targetId}`);
+                                            }}
+                                        >
+                                            워크스페이스 홈
+                                        </Button>
+                                        <Button
+                                            size="xs"
+                                            variant="light"
+                                            onClick={() => updateParam("detail", resolveWorkspaceId(workspace))}
                                         >
                                             상세
                                         </Button>
@@ -192,7 +253,7 @@ export default function WorkspacesPage() {
                                                 <Menu.Item
                                                     onClick={() => {
                                                         setEditing({
-                                                            id: workspace.id,
+                                                            id: resolveWorkspaceId(workspace),
                                                             name: workspace.name,
                                                             description: workspace.description,
                                                         });
@@ -201,18 +262,39 @@ export default function WorkspacesPage() {
                                                             description: workspace.description ?? "",
                                                         });
                                                     }}
-                                                >
-                                                    수정
-                                                </Menu.Item>
-                                                <Menu.Item
-                                                    color="red"
-                                                    onClick={() =>
-                                                        setDeleteTarget({
-                                                            id: workspace.id,
+                                            >
+                                                수정
+                                            </Menu.Item>
+                                            <Menu.Item
+                                                onClick={() => {
+                                                    fetchDefaultOptions(resolveWorkspaceId(workspace)).then((data) => {
+                                                        setDefaultOptionsTarget({
+                                                            id: resolveWorkspaceId(workspace),
                                                             name: workspace.name,
-                                                        })
-                                                    }
-                                                >
+                                                        });
+                                                        defaultOptionsForm.setValues({
+                                                            temperature: data?.temperature ?? "",
+                                                            topP: data?.topP ?? "",
+                                                            maxTokens: data?.maxTokens ?? "",
+                                                            textFormat: data?.textFormat ?? "",
+                                                            effort: data?.effort ?? "",
+                                                            verbosity: data?.verbosity ?? "",
+                                                            summary: data?.summary ?? "",
+                                                        });
+                                                    });
+                                                }}
+                                            >
+                                                defaultOptions 수정
+                                            </Menu.Item>
+                                            <Menu.Item
+                                                color="red"
+                                                onClick={() =>
+                                                    setDeleteTarget({
+                                                        id: resolveWorkspaceId(workspace),
+                                                        name: workspace.name,
+                                                    })
+                                                }
+                                            >
                                                     삭제
                                                 </Menu.Item>
                                             </Menu.Dropdown>
@@ -276,6 +358,99 @@ export default function WorkspacesPage() {
                         <Group justify="flex-end">
                             <Button type="submit" loading={updateMutation.isPending}>
                                 수정
+                            </Button>
+                        </Group>
+                    </Stack>
+                </form>
+            </Modal>
+
+            <Modal
+                opened={!!defaultOptionsTarget}
+                onClose={() => {
+                    setDefaultOptionsTarget(null);
+                    defaultOptionsForm.reset();
+                }}
+                title="defaultOptions 수정"
+                size="xl"
+            >
+                <form
+                    onSubmit={defaultOptionsForm.onSubmit((values) => {
+                        defaultOptionsMutation.mutate({
+                            temperature: values.temperature === "" ? undefined : values.temperature,
+                            topP: values.topP === "" ? undefined : values.topP,
+                            maxTokens: values.maxTokens === "" ? undefined : values.maxTokens,
+                            textFormat: values.textFormat.trim() || undefined,
+                            effort: values.effort || undefined,
+                            verbosity: values.verbosity || undefined,
+                            summary: values.summary || undefined,
+                        });
+                    })}
+                >
+                    <Stack>
+                        <Group grow>
+                            <NumberInput
+                                label="temperature"
+                                decimalScale={2}
+                                {...defaultOptionsForm.getInputProps("temperature")}
+                            />
+                            <NumberInput
+                                label="topP"
+                                {...defaultOptionsForm.getInputProps("topP")}
+                            />
+                            <NumberInput
+                                label="maxTokens"
+                                {...defaultOptionsForm.getInputProps("maxTokens")}
+                            />
+                        </Group>
+                        <Group grow>
+                            <TextInput
+                                label="textFormat"
+                                {...defaultOptionsForm.getInputProps("textFormat")}
+                            />
+                            <Select
+                                label="effort"
+                                data={[
+                                    { value: "DEFAULT", label: "DEFAULT" },
+                                    { value: "LOW", label: "LOW" },
+                                    { value: "MEDIUM", label: "MEDIUM" },
+                                    { value: "HIGH", label: "HIGH" },
+                                ]}
+                                clearable
+                                value={defaultOptionsForm.values.effort || null}
+                                onChange={(value) =>
+                                    defaultOptionsForm.setFieldValue("effort", value ?? "")
+                                }
+                            />
+                            <Select
+                                label="verbosity"
+                                data={[
+                                    { value: "LOW", label: "LOW" },
+                                    { value: "MEDIUM", label: "MEDIUM" },
+                                    { value: "HIGH", label: "HIGH" },
+                                ]}
+                                clearable
+                                value={defaultOptionsForm.values.verbosity || null}
+                                onChange={(value) =>
+                                    defaultOptionsForm.setFieldValue("verbosity", value ?? "")
+                                }
+                            />
+                        </Group>
+                        <Select
+                            label="summary"
+                            data={[
+                                { value: "AUTO", label: "AUTO" },
+                                { value: "CONCISE", label: "CONCISE" },
+                                { value: "DETAILED", label: "DETAILED" },
+                            ]}
+                            clearable
+                            value={defaultOptionsForm.values.summary || null}
+                            onChange={(value) =>
+                                defaultOptionsForm.setFieldValue("summary", value ?? "")
+                            }
+                        />
+                        <Group justify="flex-end">
+                            <Button type="submit" loading={defaultOptionsMutation.isPending}>
+                                저장
                             </Button>
                         </Group>
                     </Stack>

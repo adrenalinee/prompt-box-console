@@ -6,6 +6,21 @@ export type Workspace = {
     description?: string;
 };
 
+export type DefaultOptions = {
+    workspaceId: string;
+    temperature?: number;
+    topP?: number;
+    maxTokens?: number;
+    textFormat?: string;
+    effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
+    verbosity?: "LOW" | "MEDIUM" | "HIGH";
+    summary?: "AUTO" | "CONCISE" | "DETAILED";
+};
+
+export type WorkspaceDetail = Workspace & {
+    defaultLlmCallOptions?: DefaultOptions;
+};
+
 export async function fetchWorkspaces(
     page = 0,
     size = 50,
@@ -44,8 +59,13 @@ export async function createWorkspace(payload: { name: string; description?: str
     });
 }
 
-export async function fetchWorkspace(workspaceId: string) {
-    return apiFetch<Workspace>(`/workspaces/${workspaceId}`);
+export async function fetchWorkspace(workspaceId: string, includeDefaultOptions = false) {
+    const params = new URLSearchParams();
+    if (includeDefaultOptions) {
+        params.set("includeDefaultOptions", "true");
+    }
+    const query = params.toString();
+    return apiFetch<WorkspaceDetail>(`/workspaces/${workspaceId}${query ? `?${query}` : ""}`);
 }
 
 export async function updateWorkspace(
@@ -61,5 +81,33 @@ export async function updateWorkspace(
 export async function deleteWorkspace(workspaceId: string) {
     return apiFetch<void>(`/workspaces/${workspaceId}`, {
         method: "DELETE",
+    });
+}
+
+export async function fetchDefaultOptions(workspaceId: string) {
+    try {
+        return await apiFetch<DefaultOptions>(
+            `/workspaces/${workspaceId}/default-options`,
+            {},
+            { suppressNotification: true },
+        );
+    } catch (error) {
+        if (typeof error === "object" && error && "status" in error) {
+            const status = (error as { status?: number }).status;
+            if (status === 404) {
+                return null;
+            }
+        }
+        throw error;
+    }
+}
+
+export async function upsertDefaultOptions(
+    workspaceId: string,
+    payload: Omit<DefaultOptions, "workspaceId">,
+) {
+    return apiFetch<DefaultOptions>(`/workspaces/${workspaceId}/default-options`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
     });
 }

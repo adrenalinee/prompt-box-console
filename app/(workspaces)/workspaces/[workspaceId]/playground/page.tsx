@@ -1,22 +1,26 @@
 "use client";
 
 import React from "react";
-import { Grid, Loader, Stack, Text } from "@mantine/core";
+import { Button, Grid, Group, Loader, Stack, Text } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useSearchParams, useParams } from "next/navigation";
-import { fetchPrompts, fetchRefs, fetchSnapshots } from "@/lib/api/prompts";
+import { useSearchParams, useParams, usePathname, useRouter } from "next/navigation";
+import { IconPlayerPlay } from "@tabler/icons-react";
+import { fetchAdditionalInputs, fetchPrompt, fetchPrompts, fetchRefs } from "@/lib/api/prompts";
 import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { executeCall } from "@/lib/api/llmCalls";
 import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel } from "@/components/playground/ExecutePanel";
 import { OutputPanel } from "@/components/playground/OutputPanel";
+import { fetchDefaultOptions } from "@/lib/api/workspaces";
 
 export default function PlaygroundPage() {
     const params = useParams();
     const workspaceId = params?.workspaceId as string;
     const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
     const initialPromptId = searchParams.get("promptId") ?? "";
-    const initialSnapshotId = searchParams.get("snapshotId") ?? "";
+    const initialRefId = searchParams.get("refId") ?? "";
 
     const { data: prompts = [], isLoading: promptsLoading } = useQuery({
         queryKey: workspaceId ? queryKeys.prompts(workspaceId) : [],
@@ -25,18 +29,15 @@ export default function PlaygroundPage() {
     });
 
     const [selectedPromptId, setSelectedPromptId] = React.useState<string>(initialPromptId);
+    const [selectedRefId, setSelectedRefId] = React.useState<string>(initialRefId);
+    const lastPromptIdRef = React.useRef<string>(initialPromptId);
 
     React.useEffect(() => {
-        if (!selectedPromptId && prompts.length > 0) {
-            setSelectedPromptId(prompts[0].id);
+        if (lastPromptIdRef.current && lastPromptIdRef.current !== selectedPromptId) {
+            setSelectedRefId("");
         }
-    }, [prompts, selectedPromptId]);
-
-    const { data: snapshots = [], isLoading: snapshotsLoading } = useQuery({
-        queryKey: selectedPromptId ? queryKeys.snapshots(selectedPromptId) : [],
-        queryFn: () => fetchSnapshots(selectedPromptId),
-        enabled: !!selectedPromptId,
-    });
+        lastPromptIdRef.current = selectedPromptId;
+    }, [selectedPromptId]);
 
     const { data: refs = [], isLoading: refsLoading } = useQuery({
         queryKey: selectedPromptId ? queryKeys.refs(selectedPromptId) : [],
@@ -44,18 +45,32 @@ export default function PlaygroundPage() {
         enabled: !!selectedPromptId,
     });
 
+    const { data: promptDetail } = useQuery({
+        queryKey: selectedPromptId ? ["prompt", selectedPromptId] : [],
+        queryFn: () => fetchPrompt(selectedPromptId),
+        enabled: !!selectedPromptId,
+    });
+
+    React.useEffect(() => {
+        if (!selectedPromptId || selectedRefId || refs.length === 0) return;
+        const latestTagId = promptDetail?.latestTagRefId;
+        const defaultBranchId = promptDetail?.defaultBranchRefId;
+        const refIds = new Set(refs.map((ref) => String(ref.id)));
+        if (latestTagId && refIds.has(String(latestTagId))) {
+            setSelectedRefId(String(latestTagId));
+            return;
+        }
+        if (defaultBranchId && refIds.has(String(defaultBranchId))) {
+            setSelectedRefId(String(defaultBranchId));
+        }
+    }, [selectedPromptId, selectedRefId, refs, promptDetail]);
+
     const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
         queryKey: queryKeys.vendors,
         queryFn: () => fetchVendors(),
     });
 
     const [selectedVendorId, setSelectedVendorId] = React.useState<string | null>(null);
-
-    React.useEffect(() => {
-        if (!selectedVendorId && vendors.length > 0) {
-            setSelectedVendorId(vendors[0].id);
-        }
-    }, [vendors, selectedVendorId]);
 
     const { data: models = [], isLoading: modelsLoading } = useQuery({
         queryKey: workspaceId
@@ -71,14 +86,48 @@ export default function PlaygroundPage() {
         enabled: !!workspaceId,
     });
 
+    const { data: defaultOptions } = useQuery({
+        queryKey: workspaceId ? ["workspace-default-options", workspaceId] : [],
+        queryFn: () => fetchDefaultOptions(workspaceId || ""),
+        enabled: !!workspaceId,
+    });
+
+    const { data: additionalInputs = [] } = useQuery({
+        queryKey:
+            selectedPromptId && selectedRefId
+                ? ["prompt-additional-inputs", selectedPromptId, selectedRefId]
+                : [],
+        queryFn: () =>
+            fetchAdditionalInputs(selectedPromptId, Number(selectedRefId), 0, 100),
+        enabled: !!selectedPromptId && !!selectedRefId,
+    });
+
     const [outputText, setOutputText] = React.useState<string>("");
     const [callId, setCallId] = React.useState<string>("");
 
+    React.useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (selectedPromptId) {
+            params.set("promptId", selectedPromptId);
+        } else {
+            params.delete("promptId");
+            params.delete("refId");
+        }
+        if (selectedRefId) {
+            params.set("refId", selectedRefId);
+        } else {
+            params.delete("refId");
+        }
+        const query = params.toString();
+        const currentQuery = searchParams.toString();
+        if (query !== currentQuery) {
+            router.replace(query ? `${pathname}?${query}` : pathname);
+        }
+    }, [selectedPromptId, selectedRefId, pathname, router, searchParams]);
+
     const executeMutation = useMutation({
         mutationFn: (payload: {
-            sourceType: "REF" | "SNAPSHOT" | "RAW";
             refId?: number;
-            snapshotId?: string;
             instructions?: string;
             modelId: string;
             apiKeyId: string;
@@ -97,11 +146,8 @@ export default function PlaygroundPage() {
                 workspaceId: workspaceId || "",
                 llmModelId: Number(payload.modelId),
                 llmApiKeyId: payload.apiKeyId,
-                promptSnapshotId:
-                    payload.sourceType === "SNAPSHOT" ? payload.snapshotId : undefined,
-                promptRefId: payload.sourceType === "REF" ? payload.refId : undefined,
-                rawInstructionsText:
-                    payload.sourceType === "RAW" ? payload.instructions : undefined,
+                promptRefId: payload.refId,
+                rawInstructionsText: payload.instructions,
                 inputItems: payload.inputItems,
                 overrideOptions: payload.overrideOptions,
             }),
@@ -122,36 +168,44 @@ export default function PlaygroundPage() {
     return (
         <Grid>
             <Grid.Col span={{ base: 12, md: 6 }}>
-                <Stack>
-                    <Text fw={700} size="xl">
-                        Playground
-                    </Text>
-                    <ExecutePanel
-                        prompts={prompts}
-                        refs={refs}
-                        snapshots={snapshots}
-                        models={models}
-                        apiKeys={apiKeys}
-                        vendors={vendors}
-                        vendorId={selectedVendorId}
-                        onVendorChange={setSelectedVendorId}
-                        initialPromptId={initialPromptId}
-                        initialSnapshotId={initialSnapshotId}
-                        onPromptChange={setSelectedPromptId}
-                        onExecute={(values) => executeMutation.mutate(values)}
-                        isLoading={
-                            executeMutation.isPending ||
-                            snapshotsLoading ||
-                            refsLoading ||
-                            modelsLoading ||
-                            vendorsLoading ||
-                            apiKeysLoading
-                        }
-                    />
-                </Stack>
+                <ExecutePanel
+                    prompts={prompts}
+                    selectedPromptId={selectedPromptId}
+                    onPromptChange={setSelectedPromptId}
+                    refs={refs}
+                    selectedRefId={selectedRefId}
+                    onRefChange={setSelectedRefId}
+                    models={models}
+                    apiKeys={apiKeys}
+                    vendors={vendors}
+                    vendorId={selectedVendorId}
+                    onVendorChange={setSelectedVendorId}
+                    defaultOptions={defaultOptions ?? null}
+                    additionalInputs={additionalInputs}
+                    onExecute={(values) => executeMutation.mutate(values)}
+                />
             </Grid.Col>
             <Grid.Col span={{ base: 12, md: 6 }}>
-                <OutputPanel outputText={outputText} callId={callId} workspaceId={workspaceId} />
+                <Stack>
+                    <Group justify="flex-end">
+                        <Button
+                            leftSection={<IconPlayerPlay size={18} />}
+                            type="submit"
+                            form="playground-execute-form"
+                            variant="filled"
+                            loading={
+                                executeMutation.isPending ||
+                                refsLoading ||
+                                modelsLoading ||
+                                vendorsLoading ||
+                                apiKeysLoading
+                            }
+                        >
+                            실행
+                        </Button>
+                    </Group>
+                    <OutputPanel outputText={outputText} callId={callId} workspaceId={workspaceId} />
+                </Stack>
             </Grid.Col>
         </Grid>
     );
