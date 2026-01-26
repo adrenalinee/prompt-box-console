@@ -3,8 +3,10 @@
 import React from "react";
 import {
     ActionIcon,
+    Badge,
     Button,
     Group,
+    Menu,
     Modal,
     NumberInput,
     Paper,
@@ -18,10 +20,28 @@ import {
     TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { IconAdjustments, IconSearch } from "@tabler/icons-react";
+import {
+    IconAdjustments,
+    IconDotsVertical,
+    IconFileText,
+    IconGitBranch,
+    IconSearch,
+    IconServer,
+} from "@tabler/icons-react";
 import type { AdditionalInputItem, Prompt, PromptRef } from "@/lib/api/prompts";
 import type { ApiKey, Model, Vendor } from "@/lib/api/settings";
 import type { DefaultOptions } from "@/lib/api/workspaces";
+import {
+    addAdditionalInput,
+    createPrompt,
+    createRef,
+    deleteAdditionalInput,
+    updateAdditionalInput,
+    updateRef,
+} from "@/lib/api/prompts";
+import { showNotification } from "@mantine/notifications";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 
 type InputItemForm = {
     role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER";
@@ -47,6 +67,7 @@ export type ExecuteFormValues = {
 };
 
 type ExecutePanelProps = {
+    workspaceId: string;
     prompts: Prompt[];
     selectedPromptId: string;
     onPromptChange?: (promptId: string) => void;
@@ -54,7 +75,11 @@ type ExecutePanelProps = {
     selectedRefId: string;
     onRefChange?: (refId: string) => void;
     models: Model[];
+    selectedModelId?: string;
+    onModelChange?: (modelId: string) => void;
     apiKeys: ApiKey[];
+    selectedApiKeyId?: string;
+    onApiKeyChange?: (apiKeyId: string) => void;
     vendors: Vendor[];
     vendorId?: string;
     onVendorChange?: (vendorId: string | null) => void;
@@ -79,6 +104,7 @@ type ExecutePanelProps = {
 };
 
 export function ExecutePanel({
+    workspaceId,
     prompts,
     selectedPromptId,
     onPromptChange,
@@ -86,7 +112,11 @@ export function ExecutePanel({
     selectedRefId,
     onRefChange,
     models,
+    selectedModelId,
+    onModelChange,
     apiKeys,
+    selectedApiKeyId,
+    onApiKeyChange,
     vendors,
     vendorId,
     onVendorChange,
@@ -94,6 +124,14 @@ export function ExecutePanel({
     additionalInputs,
     onExecute,
 }: ExecutePanelProps) {
+    const queryClient = useQueryClient();
+    const promptChangeRef = React.useRef<{ id: string; name?: string } | null>(null);
+    const [confirmPromptChangeOpen, setConfirmPromptChangeOpen] = React.useState(false);
+    const [createPromptOpen, setCreatePromptOpen] = React.useState(false);
+    const [createRefOpen, setCreateRefOpen] = React.useState<{
+        type: "TAG" | "BRANCH";
+    } | null>(null);
+    const [promptSubmitLocked, setPromptSubmitLocked] = React.useState(false);
     const safeRefs = Array.isArray(refs) ? refs : [];
     const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));
     const vendorOptions = vendors.map((vendor) => ({
@@ -108,14 +146,15 @@ export function ExecutePanel({
     const [promptSearch, setPromptSearch] = React.useState("");
     const [modelSearch, setModelSearch] = React.useState("");
     const [refBaselineInstructions, setRefBaselineInstructions] = React.useState("");
+    const [refBaselineInputs, setRefBaselineInputs] = React.useState<InputItemForm[]>([]);
 
     const form = useForm<ExecuteFormValues>({
         initialValues: {
             promptId: selectedPromptId ?? "",
             refId: selectedRefId ?? "",
             instructions: "",
-            modelId: models[0] ? String(models[0].id) : "",
-            apiKeyId: apiKeys[0]?.id ?? "",
+            modelId: selectedModelId ?? (models[0] ? String(models[0].id) : ""),
+            apiKeyId: selectedApiKeyId ?? apiKeys[0]?.id ?? "",
             inputItems: [{ role: "USER", message: "" }],
             overrideOptions: {
                 temperature: null,
@@ -129,6 +168,27 @@ export function ExecutePanel({
         },
     });
 
+    const promptForm = useForm({
+        initialValues: {
+            name: "",
+            description: "",
+            mainRefName: "main",
+        },
+        validate: {
+            name: (value) => (!value.trim() ? "프롬프트 이름을 입력해주세요." : null),
+        },
+    });
+
+    const refForm = useForm({
+        initialValues: {
+            name: "",
+            description: "",
+        },
+        validate: {
+            name: (value) => (!value.trim() ? "이름을 입력해주세요." : null),
+        },
+    });
+
     React.useEffect(() => {
         form.setFieldValue("promptId", selectedPromptId ?? "");
     }, [selectedPromptId]);
@@ -137,6 +197,18 @@ export function ExecutePanel({
         form.setFieldValue("refId", selectedRefId ?? "");
     }, [selectedRefId]);
 
+    React.useEffect(() => {
+        if (selectedModelId !== undefined) {
+            form.setFieldValue("modelId", selectedModelId);
+        }
+    }, [selectedModelId]);
+
+    React.useEffect(() => {
+        if (selectedApiKeyId !== undefined) {
+            form.setFieldValue("apiKeyId", selectedApiKeyId);
+        }
+    }, [selectedApiKeyId]);
+
     const selectedRef = safeRefs.find((ref) => String(ref.id) === form.values.refId);
 
     React.useEffect(() => {
@@ -144,6 +216,7 @@ export function ExecutePanel({
             if (!form.values.promptId) {
                 setRefBaselineInstructions("");
                 form.setFieldValue("instructions", "");
+                setRefBaselineInputs([]);
             }
             return;
         }
@@ -154,27 +227,32 @@ export function ExecutePanel({
     React.useEffect(() => {
         if (!selectedRefId) return;
         if (additionalInputs && additionalInputs.length > 0) {
-            form.setFieldValue(
-                "inputItems",
-                additionalInputs.map((item) => ({
-                    role: item.role,
-                    message: item.message,
-                })),
-            );
+            const nextItems = additionalInputs.map((item) => ({
+                role: item.role,
+                message: item.message,
+            }));
+            form.setFieldValue("inputItems", nextItems);
+            setRefBaselineInputs(nextItems);
         } else {
-            form.setFieldValue("inputItems", [{ role: "USER", message: "" }]);
+            const defaultItems = [{ role: "USER", message: "" }];
+            form.setFieldValue("inputItems", defaultItems);
+            setRefBaselineInputs(defaultItems);
         }
     }, [selectedRefId, additionalInputs]);
 
     React.useEffect(() => {
         if (!models.length) {
             form.setFieldValue("modelId", "");
+            onModelChange?.("");
             return;
         }
         if (!models.find((model) => String(model.id) === form.values.modelId)) {
             form.setFieldValue("modelId", String(models[0].id));
+            onModelChange?.(String(models[0].id));
+            return;
         }
-    }, [models]);
+        onModelChange?.(form.values.modelId);
+    }, [models, form.values.modelId, onModelChange]);
 
     const selectedModel = models.find((model) => String(model.id) === form.values.modelId);
 
@@ -183,10 +261,12 @@ export function ExecutePanel({
         const vendorKeys = apiKeys.filter((key) => key.vendorId === selectedModel.vendorId);
         if (vendorKeys.length === 0) {
             form.setFieldValue("apiKeyId", "");
+            onApiKeyChange?.("");
             return;
         }
         if (!vendorKeys.find((key) => key.id === form.values.apiKeyId)) {
             form.setFieldValue("apiKeyId", vendorKeys[0].id);
+            onApiKeyChange?.(vendorKeys[0].id);
         }
     }, [selectedModel, apiKeys]);
 
@@ -226,13 +306,13 @@ export function ExecutePanel({
         : "-";
 
     const optionSummary = [
-        { label: "온도", value: form.values.overrideOptions.temperature ?? "-" },
-        { label: "Top P", value: form.values.overrideOptions.topP ?? "-" },
-        { label: "최대 토큰", value: form.values.overrideOptions.maxTokens ?? "-" },
-        { label: "텍스트 포맷", value: form.values.overrideOptions.textFormat || "-" },
-        { label: "노력도", value: form.values.overrideOptions.effort || "-" },
-        { label: "말의 길이", value: form.values.overrideOptions.verbosity || "-" },
-        { label: "요약", value: form.values.overrideOptions.summary || "-" },
+        { label: "temperature", value: form.values.overrideOptions.temperature ?? "-" },
+        { label: "topP", value: form.values.overrideOptions.topP ?? "-" },
+        { label: "maxTokens", value: form.values.overrideOptions.maxTokens ?? "-" },
+        { label: "textFormat", value: form.values.overrideOptions.textFormat || "-" },
+        { label: "effort", value: form.values.overrideOptions.effort || "-" },
+        { label: "verbosity", value: form.values.overrideOptions.verbosity || "-" },
+        { label: "summary", value: form.values.overrideOptions.summary || "-" },
     ];
 
     const filteredPrompts = prompts.filter((prompt) =>
@@ -255,6 +335,60 @@ export function ExecutePanel({
                 key.name ? ` / ${key.name}` : ""
             }`,
         }));
+
+    const selectedKeyLabel = selectedKey
+        ? `${vendorMap.get(selectedKey.vendorId) ?? selectedKey.vendorId} / ${
+              selectedKey.name || selectedKey.id
+          }`
+        : "-";
+
+    const isModified =
+        !!form.values.promptId &&
+        !!form.values.refId &&
+        (form.values.instructions.trim() !== refBaselineInstructions.trim() ||
+            JSON.stringify(form.values.inputItems) !== JSON.stringify(refBaselineInputs));
+    const canUseRefActions = !!form.values.promptId && !!form.values.refId;
+    const canSaveChanges = canUseRefActions && isModified && selectedRef?.type === "BRANCH";
+    const canCreateTag = canUseRefActions && selectedRef?.type === "BRANCH";
+
+    const syncAdditionalInputs = async (promptId: string, refId: number) => {
+        const existing = additionalInputs ?? [];
+        const next = form.values.inputItems.map((item, index) => ({
+            position: index + 1,
+            role: item.role,
+            message: item.message,
+        }));
+
+        const updates = next.slice(0, existing.length);
+        const toDelete = existing.slice(next.length);
+        const toAdd = next.slice(existing.length);
+
+        await Promise.all(
+            updates.map((item, index) =>
+                updateAdditionalInput(promptId, refId, existing[index].id, item),
+            ),
+        );
+        await Promise.all(toDelete.map((item) => deleteAdditionalInput(promptId, refId, item.id)));
+        await Promise.all(toAdd.map((item) => addAdditionalInput(promptId, refId, item)));
+    };
+
+    const handleSelectPrompt = (promptId: string) => {
+        form.setFieldValue("promptId", promptId);
+        form.setFieldValue("refId", "");
+        setPromptModalOpen(false);
+        onPromptChange?.(promptId);
+        onRefChange?.("");
+    };
+
+    const requestPromptChange = (promptId: string, name?: string) => {
+        if (isModified && promptId !== form.values.promptId) {
+            promptChangeRef.current = { id: promptId, name };
+            setPromptModalOpen(false);
+            setConfirmPromptChangeOpen(true);
+            return;
+        }
+        handleSelectPrompt(promptId);
+    };
 
     return (
         <form
@@ -287,43 +421,21 @@ export function ExecutePanel({
         >
             <Stack>
                 <Group justify="space-between" align="center">
-                    <Text fw={700} size="xl">
-                        Playground
-                    </Text>
-                    <Group gap="xs">
-                        <Button variant="default" onClick={() => setPromptModalOpen(true)}>
-                            {promptLabel}
-                        </Button>
+                    <Group gap="xs" align="center">
                         <Button
                             variant="default"
-                            disabled={!form.values.promptId}
-                            onClick={() => setRefModalOpen(true)}
+                            leftSection={<IconServer size={16} />}
+                            onClick={() => setModelModalOpen(true)}
                         >
-                            {refLabel}
+                            {selectedModel ? `모델: ${selectedModel.name}` : "모델 선택"}
                         </Button>
+                        <Text size="xs" c="dimmed" lineClamp={2}>
+                            {selectedKeyLabel}
+                        </Text>
                     </Group>
-                </Group>
-
-                <Group justify="space-between" align="center">
-                    <Button variant="default" onClick={() => setModelModalOpen(true)}>
-                        모델 선택
-                    </Button>
-                    <Text size="sm">
-                        <Text span c="dimmed">
-                            벤더
-                        </Text>
-                        <Text span> {selectedVendorName}</Text>
-                        {" · "}
-                        <Text span c="dimmed">
-                            모델
-                        </Text>
-                        <Text span> {selectedModel?.name ?? "-"}</Text>
-                        {" · "}
-                        <Text span c="dimmed">
-                            API Key
-                        </Text>
-                        <Text span> {apiKeyLabel}</Text>
-                    </Text>
+                    <ActionIcon variant="light" onClick={() => setOptionsModalOpen(true)}>
+                        <IconAdjustments size={16} />
+                    </ActionIcon>
                 </Group>
 
                 <Group justify="space-between" align="flex-start" style={{ flexWrap: "nowrap" }}>
@@ -340,9 +452,104 @@ export function ExecutePanel({
                             </Text>
                         ))}
                     </Text>
-                    <ActionIcon variant="light" onClick={() => setOptionsModalOpen(true)}>
-                        <IconAdjustments size={16} />
-                    </ActionIcon>
+                </Group>
+
+                <Group justify="space-between" align="center">
+                    <Group gap="xs">
+                        <Button
+                            variant="default"
+                            leftSection={<IconFileText size={16} />}
+                            onClick={() => setPromptModalOpen(true)}
+                        >
+                            {promptLabel}
+                        </Button>
+                        <Button
+                            variant="default"
+                            leftSection={<IconGitBranch size={16} />}
+                            disabled={!form.values.promptId}
+                            onClick={() => setRefModalOpen(true)}
+                        >
+                            {refLabel}
+                        </Button>
+                    </Group>
+                    <Group gap="xs">
+                        {isModified && <Badge color="orange">수정됨</Badge>}
+                        <Menu shadow="md" position="bottom-end" width={280}>
+                            <Menu.Target>
+                                <ActionIcon variant="light">
+                                    <IconDotsVertical size={16} />
+                                </ActionIcon>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                                <Menu.Item
+                                    onClick={() => {
+                                        promptForm.reset();
+                                        setCreatePromptOpen(true);
+                                    }}
+                                >
+                                    <Text fw={500}>새 프롬프트 생성</Text>
+                                    <Text size="xs" c="dimmed">
+                                        현재 입력된 내용으로 새로운 프롬프트를 생성합니다.
+                                    </Text>
+                                </Menu.Item>
+                                <Menu.Item
+                                    disabled={!canCreateTag}
+                                    onClick={() => {
+                                        refForm.reset();
+                                        setCreateRefOpen({ type: "TAG" });
+                                    }}
+                                >
+                                    <Text fw={500}>tag 생성</Text>
+                                    <Text size="xs" c="dimmed">
+                                        현재 branch의 내용을 태그로 고정합니다.
+                                    </Text>
+                                </Menu.Item>
+                                <Menu.Item disabled={!canSaveChanges}
+                                    onClick={async () => {
+                                        try {
+                                            if (!form.values.promptId || !form.values.refId) return;
+                                            const refId = Number(form.values.refId);
+                                            await updateRef(form.values.promptId, refId, {
+                                                instructions: form.values.instructions,
+                                            });
+                                            await syncAdditionalInputs(form.values.promptId, refId);
+                                            showNotification({
+                                                color: "teal",
+                                                title: "저장 완료",
+                                                message: "수정내역이 저장되었습니다.",
+                                            });
+                                        } catch (error) {
+                                            if (error && typeof error === "object" && "status" in error) {
+                                                return;
+                                            }
+                                            showNotification({
+                                                color: "red",
+                                                title: "오류",
+                                                message: "저장 중 문제가 발생했습니다.",
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <Text fw={500}>수정내역 저장</Text>
+                                    <Text size="xs" c="dimmed">
+                                        수정된 내용을 현재 branch에 저장합니다.
+                                    </Text>
+                                </Menu.Item>
+                                <Menu.Item
+                                    disabled={!canUseRefActions}
+                                    onClick={() => {
+                                        refForm.reset();
+                                        setCreateRefOpen({ type: "BRANCH" });
+                                    }}
+                                >
+                                    <Text fw={500}>새 branch</Text>
+                                    <Text size="xs" c="dimmed">
+                                        현재 수정된 내용으로 새로운 branch를 생성합니다.
+                                    </Text>
+                                </Menu.Item>
+                            </Menu.Dropdown>
+                        </Menu>
+                    </Group>
                 </Group>
 
                 <Textarea
@@ -382,15 +589,22 @@ export function ExecutePanel({
                                     w={160}
                                     {...form.getInputProps(`inputItems.${index}.role`)}
                                 />
-                                <Button
-                                    variant="subtle"
-                                    color="red"
-                                    size="xs"
-                                    onClick={() => form.removeListItem("inputItems", index)}
-                                    disabled={form.values.inputItems.length === 1}
-                                >
-                                    삭제
-                                </Button>
+                                <Menu shadow="md" position="bottom-end">
+                                    <Menu.Target>
+                                        <ActionIcon variant="light">
+                                            <IconDotsVertical size={16} />
+                                        </ActionIcon>
+                                    </Menu.Target>
+                                    <Menu.Dropdown>
+                                        <Menu.Item
+                                            color="red"
+                                            disabled={form.values.inputItems.length === 1}
+                                            onClick={() => form.removeListItem("inputItems", index)}
+                                        >
+                                            삭제
+                                        </Menu.Item>
+                                    </Menu.Dropdown>
+                                </Menu>
                             </Group>
                             <Textarea
                                 label="Message"
@@ -435,17 +649,21 @@ export function ExecutePanel({
                                             </Text>
                                         </Table.Td>
                                         <Table.Td ta="right">
-                                            <Button
-                                                size="xs"
-                                                onClick={() => {
-                                                    form.setFieldValue("promptId", prompt.id);
-                                                    form.setFieldValue("refId", "");
-                                                    setPromptModalOpen(false);
-                                                    onPromptChange?.(prompt.id);
-                                                }}
-                                            >
-                                                선택
-                                            </Button>
+                                            <Group gap="xs" justify="flex-end">
+                                                {prompt.id === form.values.promptId && (
+                                                    <Text size="xs" c="teal">
+                                                        선택됨
+                                                    </Text>
+                                                )}
+                                                <Button
+                                                    size="xs"
+                                                    onClick={() => {
+                                                        requestPromptChange(prompt.id, prompt.name);
+                                                    }}
+                                                >
+                                                    선택
+                                                </Button>
+                                            </Group>
                                         </Table.Td>
                                     </Table.Tr>
                                 ))}
@@ -456,11 +674,7 @@ export function ExecutePanel({
                         <Button
                             variant="default"
                             onClick={() => {
-                                form.setFieldValue("promptId", "");
-                                form.setFieldValue("refId", "");
-                                setPromptModalOpen(false);
-                                onPromptChange?.("");
-                                onRefChange?.("");
+                                requestPromptChange("", "");
                             }}
                         >
                             선택 해제
@@ -574,9 +788,10 @@ export function ExecutePanel({
                         placeholder="API Key 선택"
                         data={apiKeyOptions}
                         value={form.values.apiKeyId || null}
-                        onChange={(value) =>
-                            form.setFieldValue("apiKeyId", value ?? "")
-                        }
+                        onChange={(value) => {
+                            form.setFieldValue("apiKeyId", value ?? "");
+                            onApiKeyChange?.(value ?? "");
+                        }}
                         clearable
                     />
                     <ScrollArea h={360}>
@@ -595,6 +810,7 @@ export function ExecutePanel({
                                     const vendorName =
                                         vendorMap.get(model.vendorId) ?? model.vendorId;
                                     const hasApiKey = vendorKeySet.has(model.vendorId);
+                                    const isSelected = String(model.id) === form.values.modelId;
                                     return (
                                         <Table.Tr
                                             key={model.id}
@@ -611,29 +827,45 @@ export function ExecutePanel({
                                                 </Text>
                                             </Table.Td>
                                             <Table.Td ta="right">
-                                                <Button
-                                                    size="xs"
-                                                    disabled={!hasApiKey}
-                                                    onClick={() => {
-                                                        form.setFieldValue(
-                                                            "modelId",
-                                                            String(model.id),
-                                                        );
-                                                        if (!apiKeyOptions.find((key) => key.value === form.values.apiKeyId)) {
-                                                            const nextKey = apiKeys.find(
-                                                                (key) =>
-                                                                    key.vendorId === model.vendorId,
-                                                            );
+                                                <Group gap="xs" justify="flex-end">
+                                                    {isSelected && (
+                                                        <Text size="xs" c="teal">
+                                                            선택됨
+                                                        </Text>
+                                                    )}
+                                                    <Button
+                                                        size="xs"
+                                                        disabled={!hasApiKey}
+                                                        onClick={() => {
                                                             form.setFieldValue(
-                                                                "apiKeyId",
-                                                                nextKey?.id ?? "",
+                                                                "modelId",
+                                                                String(model.id),
                                                             );
-                                                        }
-                                                        setModelModalOpen(false);
-                                                    }}
-                                                >
-                                                    선택
-                                                </Button>
+                                                            onModelChange?.(String(model.id));
+                                                            if (
+                                                                !apiKeyOptions.find(
+                                                                    (key) =>
+                                                                        key.value ===
+                                                                            form.values.apiKeyId,
+                                                                )
+                                                            ) {
+                                                                const nextKey = apiKeys.find(
+                                                                    (key) =>
+                                                                        key.vendorId ===
+                                                                        model.vendorId,
+                                                                );
+                                                                form.setFieldValue(
+                                                                    "apiKeyId",
+                                                                    nextKey?.id ?? "",
+                                                                );
+                                                                onApiKeyChange?.(nextKey?.id ?? "");
+                                                            }
+                                                            setModelModalOpen(false);
+                                                        }}
+                                                    >
+                                                        선택
+                                                    </Button>
+                                                </Group>
                                             </Table.Td>
                                         </Table.Tr>
                                     );
@@ -653,20 +885,20 @@ export function ExecutePanel({
                 <Stack>
                     <Group grow>
                         <NumberInput
-                            label="온도"
+                            label="temperature"
                             description="기본값: workspace defaultOptions"
                             decimalScale={2}
                             min={0}
                             {...form.getInputProps("overrideOptions.temperature")}
                         />
                         <NumberInput
-                            label="Top P"
+                            label="topP"
                             description="0~1 범위의 샘플링 확률"
                             min={0}
                             {...form.getInputProps("overrideOptions.topP")}
                         />
                         <NumberInput
-                            label="최대 토큰"
+                            label="maxTokens"
                             description="최대 출력 토큰 수"
                             min={0}
                             {...form.getInputProps("overrideOptions.maxTokens")}
@@ -674,12 +906,12 @@ export function ExecutePanel({
                     </Group>
                     <Group grow>
                         <TextInput
-                            label="텍스트 포맷"
+                            label="textFormat"
                             description="예: markdown, plain"
                             {...form.getInputProps("overrideOptions.textFormat")}
                         />
                         <Select
-                            label="노력도"
+                            label="effort"
                             description="응답 난이도/노력 수준"
                             data={[
                                 { value: "DEFAULT", label: "DEFAULT" },
@@ -694,7 +926,7 @@ export function ExecutePanel({
                             }
                         />
                         <Select
-                            label="말의 길이"
+                            label="verbosity"
                             description="응답 길이 수준"
                             data={[
                                 { value: "LOW", label: "LOW" },
@@ -709,7 +941,7 @@ export function ExecutePanel({
                         />
                     </Group>
                     <Select
-                        label="요약"
+                        label="summary"
                         description="요약 스타일"
                         data={[
                             { value: "AUTO", label: "AUTO" },
@@ -724,6 +956,156 @@ export function ExecutePanel({
                     />
                     <Group justify="flex-end">
                         <Button onClick={() => setOptionsModalOpen(false)}>확인</Button>
+                    </Group>
+                </Stack>
+            </Modal>
+
+            <Modal
+                opened={confirmPromptChangeOpen}
+                onClose={() => setConfirmPromptChangeOpen(false)}
+                title="프롬프트 변경"
+            >
+                <Stack>
+                    <Text>
+                        입력된 내용이 사라지고 선택하신 프롬프트의 내용으로 변경됩니다. 계속
+                        하시겠습니까?
+                    </Text>
+                    <Group justify="flex-end">
+                        <Button variant="default" onClick={() => setConfirmPromptChangeOpen(false)}>
+                            취소
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                const target = promptChangeRef.current;
+                                setConfirmPromptChangeOpen(false);
+                                if (target) {
+                                    handleSelectPrompt(target.id);
+                                }
+                                promptChangeRef.current = null;
+                            }}
+                        >
+                            계속
+                        </Button>
+                    </Group>
+                </Stack>
+            </Modal>
+
+            <Modal
+                opened={createPromptOpen}
+                onClose={() => setCreatePromptOpen(false)}
+                title="새 프롬프트 생성"
+                size="lg"
+            >
+                <Stack>
+                    <TextInput label="프롬프트 이름" required {...promptForm.getInputProps("name")} />
+                    <TextInput label="설명" {...promptForm.getInputProps("description")} />
+                    <TextInput label="메인 브랜치 이름" {...promptForm.getInputProps("mainRefName")} />
+                    <Group justify="flex-end">
+                        <Button
+                            type="button"
+                            onClick={async () => {
+                                const result = promptForm.validate();
+                                if (result.hasErrors) return;
+                                try {
+                                    setPromptSubmitLocked(true);
+                                    const values = promptForm.values;
+                                    const created = await createPrompt(workspaceId, {
+                                        name: values.name.trim(),
+                                        description: values.description.trim() || undefined,
+                                        instructions: form.values.instructions,
+                                        mainRefName: values.mainRefName.trim() || "main",
+                                        additionalInputs: form.values.inputItems.map((item, index) => ({
+                                            position: index + 1,
+                                            role: item.role,
+                                            message: item.message,
+                                        })),
+                                    });
+                                    setCreatePromptOpen(false);
+                                    await queryClient.invalidateQueries({
+                                        queryKey: queryKeys.prompts(workspaceId),
+                                    });
+                                    handleSelectPrompt(created.id);
+                                    if (created.defaultBranchRefId) {
+                                        onRefChange?.(String(created.defaultBranchRefId));
+                                    }
+                                    showNotification({
+                                        color: "teal",
+                                        title: "생성 완료",
+                                        message: "프롬프트가 생성되었습니다.",
+                                    });
+                                } catch {
+                                    // notifications handled by apiFetch
+                                } finally {
+                                    setPromptSubmitLocked(false);
+                                }
+                            }}
+                            loading={promptSubmitLocked}
+                        >
+                            생성
+                        </Button>
+                    </Group>
+                </Stack>
+            </Modal>
+
+            <Modal
+                opened={!!createRefOpen}
+                onClose={() => setCreateRefOpen(null)}
+                title={createRefOpen?.type === "TAG" ? "새 Tag 생성" : "새 Branch 생성"}
+                size="lg"
+            >
+                <Stack>
+                    <TextInput label="이름" required {...refForm.getInputProps("name")} />
+                    <TextInput label="설명" {...refForm.getInputProps("description")} />
+                    <Group justify="flex-end">
+                        <Button
+                            type="button"
+                            onClick={async () => {
+                                const result = refForm.validate();
+                                if (result.hasErrors) return;
+                                if (!form.values.promptId || !form.values.refId || !createRefOpen) {
+                                    return;
+                                }
+                                try {
+                                    const values = refForm.values;
+                                    const ref = await createRef(form.values.promptId, {
+                                        name: values.name.trim(),
+                                        description: values.description.trim() || undefined,
+                                        type: createRefOpen.type,
+                                        fromRefId: Number(form.values.refId),
+                                    });
+
+                                    if (createRefOpen.type === "BRANCH" && isModified) {
+                                        await updateRef(form.values.promptId, ref.id, {
+                                            instructions: form.values.instructions,
+                                            description: values.description.trim() || undefined,
+                                        });
+                                        await syncAdditionalInputs(form.values.promptId, ref.id);
+                                    }
+
+                                    setCreateRefOpen(null);
+                                    await queryClient.invalidateQueries({
+                                        queryKey: queryKeys.refs(form.values.promptId),
+                                    });
+                                    onRefChange?.(String(ref.id));
+                                    showNotification({
+                                        color: "teal",
+                                        title: "생성 완료",
+                                        message: `${createRefOpen.type}가 생성되었습니다.`,
+                                    });
+                                } catch (error) {
+                                    if (error && typeof error === "object" && "status" in error) {
+                                        return;
+                                    }
+                                    showNotification({
+                                        color: "red",
+                                        title: "오류",
+                                        message: "생성 중 문제가 발생했습니다.",
+                                    });
+                                }
+                            }}
+                        >
+                            생성
+                        </Button>
                     </Group>
                 </Stack>
             </Modal>

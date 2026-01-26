@@ -4,7 +4,7 @@ import React from "react";
 import { Button, Grid, Group, Loader, Stack, Text } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearchParams, useParams, usePathname, useRouter } from "next/navigation";
-import { IconPlayerPlay } from "@tabler/icons-react";
+import { IconArrowsDiff, IconPlayerPlay } from "@tabler/icons-react";
 import { fetchAdditionalInputs, fetchPrompt, fetchPrompts, fetchRefs } from "@/lib/api/prompts";
 import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { executeCall } from "@/lib/api/llmCalls";
@@ -21,6 +21,8 @@ export default function PlaygroundPage() {
     const router = useRouter();
     const initialPromptId = searchParams.get("promptId") ?? "";
     const initialRefId = searchParams.get("refId") ?? "";
+    const initialModelId = searchParams.get("modelId") ?? "";
+    const initialApiKeyId = searchParams.get("apiKeyId") ?? "";
 
     const { data: prompts = [], isLoading: promptsLoading } = useQuery({
         queryKey: workspaceId ? queryKeys.prompts(workspaceId) : [],
@@ -71,6 +73,8 @@ export default function PlaygroundPage() {
     });
 
     const [selectedVendorId, setSelectedVendorId] = React.useState<string | null>(null);
+    const [selectedModelId, setSelectedModelId] = React.useState<string>(initialModelId);
+    const [selectedApiKeyId, setSelectedApiKeyId] = React.useState<string>(initialApiKeyId);
 
     const { data: models = [], isLoading: modelsLoading } = useQuery({
         queryKey: workspaceId
@@ -118,12 +122,30 @@ export default function PlaygroundPage() {
         } else {
             params.delete("refId");
         }
+        if (selectedModelId) {
+            params.set("modelId", selectedModelId);
+        } else {
+            params.delete("modelId");
+        }
+        if (selectedApiKeyId) {
+            params.set("apiKeyId", selectedApiKeyId);
+        } else {
+            params.delete("apiKeyId");
+        }
         const query = params.toString();
         const currentQuery = searchParams.toString();
         if (query !== currentQuery) {
             router.replace(query ? `${pathname}?${query}` : pathname);
         }
-    }, [selectedPromptId, selectedRefId, pathname, router, searchParams]);
+    }, [
+        selectedPromptId,
+        selectedRefId,
+        selectedModelId,
+        selectedApiKeyId,
+        pathname,
+        router,
+        searchParams,
+    ]);
 
     const executeMutation = useMutation({
         mutationFn: (payload: {
@@ -166,47 +188,61 @@ export default function PlaygroundPage() {
     }
 
     return (
-        <Grid>
-            <Grid.Col span={{ base: 12, md: 6 }}>
-                <ExecutePanel
-                    prompts={prompts}
-                    selectedPromptId={selectedPromptId}
-                    onPromptChange={setSelectedPromptId}
-                    refs={refs}
-                    selectedRefId={selectedRefId}
-                    onRefChange={setSelectedRefId}
-                    models={models}
-                    apiKeys={apiKeys}
-                    vendors={vendors}
-                    vendorId={selectedVendorId}
-                    onVendorChange={setSelectedVendorId}
-                    defaultOptions={defaultOptions ?? null}
-                    additionalInputs={additionalInputs}
-                    onExecute={(values) => executeMutation.mutate(values)}
-                />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, md: 6 }}>
-                <Stack>
-                    <Group justify="flex-end">
-                        <Button
-                            leftSection={<IconPlayerPlay size={18} />}
-                            type="submit"
-                            form="playground-execute-form"
-                            variant="filled"
-                            loading={
-                                executeMutation.isPending ||
-                                refsLoading ||
-                                modelsLoading ||
-                                vendorsLoading ||
-                                apiKeysLoading
-                            }
-                        >
-                            실행
-                        </Button>
-                    </Group>
+        <Stack>
+            <Group justify="space-between" align="center">
+                <Group gap="sm">
+                    <Text fw={700} size="xl">
+                        Playground
+                    </Text>
+                    <Button
+                        leftSection={<IconPlayerPlay size={16} />}
+                        type="submit"
+                        form="playground-execute-form"
+                        variant="filled"
+                        loading={
+                            executeMutation.isPending ||
+                            refsLoading ||
+                            modelsLoading ||
+                            vendorsLoading ||
+                            apiKeysLoading
+                        }
+                    >
+                        실행
+                    </Button>
+                </Group>
+                <Button variant="default" leftSection={<IconArrowsDiff size={16} />} disabled>
+                    비교
+                </Button>
+            </Group>
+
+            <Grid>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                    <ExecutePanel
+                        workspaceId={workspaceId}
+                        prompts={prompts}
+                        selectedPromptId={selectedPromptId}
+                        onPromptChange={setSelectedPromptId}
+                        refs={refs}
+                        selectedRefId={selectedRefId}
+                        onRefChange={setSelectedRefId}
+                        models={models}
+                        selectedModelId={selectedModelId}
+                        onModelChange={setSelectedModelId}
+                        apiKeys={apiKeys}
+                        selectedApiKeyId={selectedApiKeyId}
+                        onApiKeyChange={setSelectedApiKeyId}
+                        vendors={vendors}
+                        vendorId={selectedVendorId}
+                        onVendorChange={setSelectedVendorId}
+                        defaultOptions={defaultOptions ?? null}
+                        additionalInputs={additionalInputs}
+                        onExecute={(values) => executeMutation.mutate(values)}
+                    />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 6 }}>
                     <OutputPanel outputText={outputText} callId={callId} workspaceId={workspaceId} />
-                </Stack>
-            </Grid.Col>
-        </Grid>
+                </Grid.Col>
+            </Grid>
+        </Stack>
     );
 }
