@@ -18,7 +18,7 @@ import {
     Tabs,
     Text,
     Textarea,
-    TextInput,
+    TextInput, Tooltip,
 } from "@mantine/core";
 import Link from "next/link";
 import { useForm } from "@mantine/form";
@@ -368,6 +368,9 @@ export function ExecutePanel({
           }`
         : "-";
 
+    const hasPromptContent =
+        form.values.instructions.trim().length > 0 ||
+        form.values.inputItems.some((item) => item.message.trim().length > 0);
     const isModified =
         !!form.values.promptId &&
         !!form.values.refId &&
@@ -376,6 +379,9 @@ export function ExecutePanel({
     const canUseRefActions = !!form.values.promptId && !!form.values.refId;
     const canSaveChanges = canUseRefActions && isModified && selectedRef?.type === "BRANCH";
     const canCreateTag = canUseRefActions && selectedRef?.type === "BRANCH";
+    const canCreateBranch =
+        canUseRefActions &&
+        (selectedRef?.type === "TAG" || (selectedRef?.type === "BRANCH" && isModified));
 
     const syncAdditionalInputs = async (promptId: string, refId: number) => {
         const existing = additionalInputs ?? [];
@@ -518,17 +524,26 @@ export function ExecutePanel({
                                 </ActionIcon>
                             </Menu.Target>
                             <Menu.Dropdown>
-                                <Menu.Item
-                                    onClick={() => {
-                                        promptForm.reset();
-                                        setCreatePromptOpen(true);
-                                    }}
+                                <Tooltip
+                                    label="내용이 비어 있어 생성할 수 없습니다."
+                                    disabled={hasPromptContent}
+                                    withArrow
                                 >
-                                    <Text fw={500}>새 프롬프트 생성</Text>
-                                    <Text size="xs" c="dimmed">
-                                        현재 입력된 내용으로 새로운 프롬프트를 생성합니다.
-                                    </Text>
-                                </Menu.Item>
+                                    <div>
+                                        <Menu.Item
+                                            disabled={!hasPromptContent}
+                                            onClick={() => {
+                                                promptForm.reset();
+                                                setCreatePromptOpen(true);
+                                            }}
+                                        >
+                                            <Text fw={500}>새 프롬프트 생성</Text>
+                                            <Text size="xs" c="dimmed">
+                                                현재 입력된 내용으로 새로운 프롬프트를 생성합니다.
+                                            </Text>
+                                        </Menu.Item>
+                                    </div>
+                                </Tooltip>
                                 <Menu.Item
                                     disabled={!canCreateTag}
                                     onClick={() => {
@@ -573,7 +588,7 @@ export function ExecutePanel({
                                     </Text>
                                 </Menu.Item>
                                 <Menu.Item
-                                    disabled={!canUseRefActions}
+                                    disabled={!canCreateBranch}
                                     onClick={() => {
                                         refForm.reset();
                                         setCreateRefOpen({ type: "BRANCH" });
