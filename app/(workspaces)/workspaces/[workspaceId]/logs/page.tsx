@@ -1,24 +1,12 @@
 "use client";
 
 import React from "react";
-import {
-    ActionIcon,
-    Button,
-    Group,
-    Loader,
-    Menu,
-    Pagination,
-    Select,
-    Stack,
-    Table,
-    Text,
-} from "@mantine/core";
+import { Alert, Button, Group, Loader, Pagination, Select, Stack, Table, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLogsPage } from "@/lib/api/llmCalls";
 import { fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { IconDotsVertical } from "@tabler/icons-react";
 
 export default function LogsPage() {
     const params = useParams();
@@ -36,14 +24,22 @@ export default function LogsPage() {
 
     const { data: vendors = [] } = useQuery({
         queryKey: queryKeys.vendors,
-        queryFn: () => fetchVendors(),
+        queryFn: () =>
+            fetchVendors(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
     const { data: models = [] } = useQuery({
         queryKey: workspaceId
             ? queryKeys.workspaceModels(workspaceId, vendorId)
             : [],
-        queryFn: () => fetchWorkspaceModels(workspaceId || "", vendorId || undefined),
+        queryFn: () =>
+            fetchWorkspaceModels(workspaceId || "", vendorId || undefined, 0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
         enabled: !!workspaceId,
     });
 
@@ -63,7 +59,7 @@ export default function LogsPage() {
         [searchParams, router, pathname],
     );
 
-    const { data: pageData, isLoading } = useQuery({
+    const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [
             ...queryKeys.logs(workspaceId, { modelId, status }),
             page,
@@ -80,6 +76,7 @@ export default function LogsPage() {
                 page - 1,
                 size,
                 sort || undefined,
+                { suppressNotification: true, suppressAlert: true },
             ),
         enabled: !!workspaceId,
     });
@@ -146,6 +143,12 @@ export default function LogsPage() {
             </Group>
             {isLoading ? (
                 <Loader />
+            ) : isError ? (
+                <Alert color="red" title="오류">
+                    {error && typeof error === "object" && "message" in error
+                        ? String((error as { message?: string }).message)
+                        : "요청에 실패했습니다."}
+                </Alert>
             ) : (pageData?.items ?? []).length === 0 ? (
                 <Text c="dimmed">로그가 없습니다.</Text>
             ) : (
@@ -169,30 +172,17 @@ export default function LogsPage() {
                                 <Table.Td>{log.elapsed ?? "-"}</Table.Td>
                                 <Table.Td>{log.errorMessage ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
-                                    <Group gap="xs" justify="flex-end">
-                                        <Button
-                                            size="xs"
-                                            variant="light"
-                                            onClick={() =>
-                                                router.push(
-                                                    `/workspaces/${workspaceId}/logs/${log.id}`,
-                                                )
-                                            }
-                                        >
-                                            상세
-                                        </Button>
-                                        <Menu shadow="md" position="bottom-end">
-                                            <Menu.Target>
-                                                <ActionIcon variant="light">
-                                                    <IconDotsVertical size={16} />
-                                                </ActionIcon>
-                                            </Menu.Target>
-                                            <Menu.Dropdown>
-                                                <Menu.Item disabled>수정</Menu.Item>
-                                                <Menu.Item disabled>삭제</Menu.Item>
-                                            </Menu.Dropdown>
-                                        </Menu>
-                                    </Group>
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        onClick={() =>
+                                            router.push(
+                                                `/workspaces/${workspaceId}/logs/${log.id}`,
+                                            )
+                                        }
+                                    >
+                                        상세
+                                    </Button>
                                 </Table.Td>
                             </Table.Tr>
                         ))}

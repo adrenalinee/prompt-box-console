@@ -17,9 +17,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const router = useRouter();
     const workspaceId = params?.workspaceId as string;
 
-    const { data: workspaces = [], isLoading } = useQuery({
+    const { data: workspaces = [], isLoading, isError } = useQuery({
         queryKey: queryKeys.workspaces,
-        queryFn: () => fetchWorkspaces(),
+        queryFn: () =>
+            fetchWorkspaces(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
     const workspaceOptions = workspaces.map((workspace) => ({
@@ -44,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
                         <Text fw={700} component={Link} href="/" className="hover:opacity-80">
-                            mostPrompt
+                            PromptBox
                         </Text>
                         <Select
                             data={workspaceOptions}
@@ -67,7 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </AppShell.Navbar>
             <AppShell.Main>
                 <Box>
-                    {!isLoading && !currentWorkspace && (
+                    {!isLoading && !isError && !currentWorkspace && (
                         <Text c="dimmed" mb="sm">
                             워크스페이스 목록에 없는 ID입니다. 그래도 페이지는 표시됩니다.
                         </Text>

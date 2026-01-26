@@ -3,6 +3,7 @@
 import React from "react";
 import {
     ActionIcon,
+    Alert,
     Button,
     Group,
     Loader,
@@ -54,7 +55,7 @@ export default function PromptsPage() {
         [searchParams, router, pathname],
     );
 
-    const { data: pageData, isLoading } = useQuery({
+    const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [...queryKeys.prompts(workspaceId), nameFilter, page, size, sort],
         queryFn: () =>
             fetchPromptsPage(
@@ -63,6 +64,7 @@ export default function PromptsPage() {
                 size,
                 nameFilter || undefined,
                 sort || undefined,
+                { suppressNotification: true, suppressAlert: true },
             ),
         enabled: !!workspaceId,
     });
@@ -80,7 +82,7 @@ export default function PromptsPage() {
         <Stack>
             <Group justify="space-between">
                 <Text fw={700} size="xl">
-                    Prompts
+                    Named prompts
                 </Text>
                 <Button component={Link} href={`/workspaces/${workspaceId}/prompts/new`}>
                     새 Prompt
@@ -107,8 +109,14 @@ export default function PromptsPage() {
             </Group>
             {isLoading ? (
                 <Loader />
+            ) : isError ? (
+                <Alert color="red" title="오류">
+                    {error && typeof error === "object" && "message" in error
+                        ? String((error as { message?: string }).message)
+                        : "요청에 실패했습니다."}
+                </Alert>
             ) : items.length === 0 ? (
-                <Text c="dimmed">등록된 Prompt가 없습니다.</Text>
+                <Text c="dimmed">등록된 Named prompt가 없습니다.</Text>
             ) : (
                 <Table striped highlightOnHover withTableBorder>
                     <Table.Thead>

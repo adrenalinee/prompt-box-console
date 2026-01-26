@@ -3,6 +3,7 @@
 import React from "react";
 import {
     ActionIcon,
+    Alert,
     Button,
     Group,
     Loader,
@@ -77,10 +78,14 @@ export default function SettingsModelsPage() {
 
     const { data: vendors = [] } = useQuery({
         queryKey: queryKeys.vendors,
-        queryFn: () => fetchVendors(),
+        queryFn: () =>
+            fetchVendors(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
-    const { data: pageData, isLoading } = useQuery({
+    const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [...queryKeys.models(vendorId || null), nameFilter, page, size, sort],
         queryFn: () =>
             fetchModelsPage(
@@ -89,6 +94,7 @@ export default function SettingsModelsPage() {
                 size,
                 nameFilter || undefined,
                 sort || undefined,
+                { suppressNotification: true, suppressAlert: true },
             ),
     });
 
@@ -102,6 +108,7 @@ export default function SettingsModelsPage() {
         value: vendor.id,
         label: vendor.name,
     }));
+    const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));
 
     const form = useForm({
         initialValues: {
@@ -216,12 +223,19 @@ export default function SettingsModelsPage() {
             </Group>
             {isLoading ? (
                 <Loader />
+            ) : isError ? (
+                <Alert color="red" title="오류">
+                    {error && typeof error === "object" && "message" in error
+                        ? String((error as { message?: string }).message)
+                        : "요청에 실패했습니다."}
+                </Alert>
             ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 모델이 없습니다.</Text>
             ) : (
                 <Table striped highlightOnHover withTableBorder>
                     <Table.Thead>
                         <Table.Tr>
+                            <Table.Th>Vendor</Table.Th>
                             <Table.Th>Name</Table.Th>
                             <Table.Th>Model Key</Table.Th>
                             <Table.Th>Description</Table.Th>
@@ -231,6 +245,9 @@ export default function SettingsModelsPage() {
                     <Table.Tbody>
                         {items.map((model) => (
                             <Table.Tr key={model.id}>
+                                <Table.Td>
+                                    {vendorMap.get(model.vendorId) ?? model.vendorId ?? "-"}
+                                </Table.Td>
                                 <Table.Td>{model.name ?? "-"}</Table.Td>
                                 <Table.Td>{model.modelKey}</Table.Td>
                                 <Table.Td>{model.description ?? "-"}</Table.Td>

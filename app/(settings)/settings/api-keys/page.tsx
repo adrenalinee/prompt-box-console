@@ -3,6 +3,7 @@
 import React from "react";
 import {
     ActionIcon,
+    Alert,
     Button,
     Group,
     Loader,
@@ -75,15 +76,23 @@ export default function SettingsApiKeysPage() {
 
     const { data: workspaces = [], isLoading: workspaceLoading } = useQuery({
         queryKey: queryKeys.workspaces,
-        queryFn: () => fetchWorkspaces(),
+        queryFn: () =>
+            fetchWorkspaces(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
     const { data: vendors = [] } = useQuery({
         queryKey: queryKeys.vendors,
-        queryFn: () => fetchVendors(),
+        queryFn: () =>
+            fetchVendors(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
-    const { data: pageData, isLoading } = useQuery({
+    const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [...queryKeys.apiKeys({ workspaceId, vendorId }), nameFilter, page, size, sort],
         queryFn: () =>
             fetchApiKeysPage(
@@ -95,6 +104,7 @@ export default function SettingsApiKeysPage() {
                 page - 1,
                 size,
                 sort || undefined,
+                { suppressNotification: true, suppressAlert: true },
             ),
     });
 
@@ -232,6 +242,12 @@ export default function SettingsApiKeysPage() {
 
             {isLoading ? (
                 <Loader />
+            ) : isError ? (
+                <Alert color="red" title="오류">
+                    {error && typeof error === "object" && "message" in error
+                        ? String((error as { message?: string }).message)
+                        : "요청에 실패했습니다."}
+                </Alert>
             ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 API Key가 없습니다.</Text>
             ) : (

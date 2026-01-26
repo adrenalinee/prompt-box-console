@@ -125,7 +125,9 @@ export default function PromptDetailPage() {
 
     React.useEffect(() => {
         if (!refs.length) {
-            setSelectedRefId(null);
+            if (selectedRefId !== null) {
+                setSelectedRefId(null);
+            }
             return;
         }
         if (selectedRefId && refs.some((ref) => ref.id === selectedRefId)) {

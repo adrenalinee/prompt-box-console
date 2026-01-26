@@ -29,18 +29,42 @@ async function parseJsonSafe(response: Response) {
     }
 }
 
+export type ApiFetchConfig = {
+    suppressNotification?: boolean;
+    suppressAlert?: boolean;
+};
+
 export async function apiFetch<T>(
     path: string,
     options: RequestInit = {},
-    config: { suppressNotification?: boolean } = {},
+    config: ApiFetchConfig = {},
 ): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {}),
-        },
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {}),
+            },
+        });
+    } catch (error) {
+        const message =
+            error instanceof Error ? error.message : "서버에 연결할 수 없습니다.";
+        if (typeof window !== "undefined" && !config.suppressNotification) {
+            showNotification({
+                color: "red",
+                title: "네트워크 오류",
+                message,
+            });
+        }
+        if (typeof window !== "undefined" && !config.suppressAlert) {
+            window.dispatchEvent(
+                new CustomEvent("app-api-error", { detail: { message } }),
+            );
+        }
+        throw error;
+    }
 
     if (!response.ok) {
         const body = await parseJsonSafe(response);
@@ -56,6 +80,11 @@ export async function apiFetch<T>(
                 title: `오류 ${error.status}`,
                 message: error.message,
             });
+        }
+        if (typeof window !== "undefined" && !config.suppressAlert) {
+            window.dispatchEvent(
+                new CustomEvent("app-api-error", { detail: { message: error.message } }),
+            );
         }
 
         throw error;

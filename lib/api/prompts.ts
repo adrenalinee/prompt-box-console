@@ -1,4 +1,4 @@
-import { apiFetch, PageResponse } from "@/lib/api/client";
+import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 
 export type Prompt = {
     id: string;
@@ -33,9 +33,16 @@ export type AdditionalInputItem = {
     message: string;
 };
 
-export async function fetchPrompts(workspaceId: string, page = 0, size = 50) {
+export async function fetchPrompts(
+    workspaceId: string,
+    page = 0,
+    size = 50,
+    config?: ApiFetchConfig,
+) {
     const response = await apiFetch<PageResponse<Prompt>>(
         `/workspaces/${workspaceId}/prompts?page=${page}&size=${size}`,
+        {},
+        config,
     );
     return response.items;
 }
@@ -46,6 +53,7 @@ export async function fetchPromptsPage(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -54,6 +62,8 @@ export async function fetchPromptsPage(
     if (sort) params.set("sort", sort);
     return apiFetch<PageResponse<Prompt>>(
         `/workspaces/${workspaceId}/prompts?${params.toString()}`,
+        {},
+        config,
     );
 }
 
@@ -79,6 +89,7 @@ export async function fetchAllPromptsPage(
     page = 0,
     size = 50,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
@@ -86,7 +97,7 @@ export async function fetchAllPromptsPage(
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
-    return apiFetch<PageResponse<Prompt>>(`/prompts?${params.toString()}`);
+    return apiFetch<PageResponse<Prompt>>(`/prompts?${params.toString()}`, {}, config);
 }
 
 export async function createPrompt(
@@ -132,9 +143,16 @@ export async function deletePrompt(promptId: string) {
     });
 }
 
-export async function fetchRefs(promptId: string, page = 0, size = 50) {
+export async function fetchRefs(
+    promptId: string,
+    page = 0,
+    size = 50,
+    config?: ApiFetchConfig,
+) {
     const response = await apiFetch<PageResponse<PromptRef>>(
         `/prompts/${promptId}/refs?page=${page}&size=${size}`,
+        {},
+        config,
     );
     return response.items;
 }
@@ -166,9 +184,17 @@ export async function deleteRef(promptId: string, refId: number) {
     });
 }
 
-export async function fetchAdditionalInputs(promptId: string, refId: number, page = 0, size = 50) {
+export async function fetchAdditionalInputs(
+    promptId: string,
+    refId: number,
+    page = 0,
+    size = 50,
+    config?: ApiFetchConfig,
+) {
     const response = await apiFetch<PageResponse<AdditionalInputItem>>(
         `/prompts/${promptId}/refs/${refId}/additional-input-items?page=${page}&size=${size}`,
+        {},
+        config,
     );
     return response.items;
 }

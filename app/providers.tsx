@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { createTheme, MantineProvider } from '@mantine/core';
+import { Button, Group, Modal, Text, createTheme, MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import { ModalsProvider } from '@mantine/modals';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -25,6 +25,7 @@ const shikiAdapter = createShikiAdapter(loadShiki);
 
 
 export function Providers({ children }: { children: React.ReactNode }) {
+    const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
     const [queryClient] = React.useState(
         () =>
             new QueryClient({
@@ -34,12 +35,34 @@ export function Providers({ children }: { children: React.ReactNode }) {
             }),
     );
 
+    React.useEffect(() => {
+        const handler = (event: Event) => {
+            const detail = (event as CustomEvent<{ message?: string }>).detail;
+            if (detail?.message) {
+                setErrorMessage(detail.message);
+            }
+        };
+        window.addEventListener("app-api-error", handler);
+        return () => window.removeEventListener("app-api-error", handler);
+    }, []);
+
     return (
         <QueryClientProvider client={queryClient}>
             <MantineProvider theme={theme} defaultColorScheme="light">
                 <CodeHighlightAdapterProvider adapter={shikiAdapter}>
                     <ModalsProvider>
                         <Notifications position="top-right" />
+                        <Modal
+                            opened={!!errorMessage}
+                            onClose={() => setErrorMessage(null)}
+                            title="오류"
+                            centered
+                        >
+                            <Text>{errorMessage}</Text>
+                            <Group justify="flex-end" mt="md">
+                                <Button onClick={() => setErrorMessage(null)}>확인</Button>
+                            </Group>
+                        </Modal>
                         {children}
                     </ModalsProvider>
                 </CodeHighlightAdapterProvider>

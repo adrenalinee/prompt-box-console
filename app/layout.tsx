@@ -12,8 +12,8 @@ import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import { Providers } from "@/app/providers";
 
 export const metadata: Metadata = {
-    title: "mostPrompt",
-    description: "mostPrompt MVP",
+    title: "PromptBox",
+    description: "PromptBox",
 };
 
 export default function RootLayout({

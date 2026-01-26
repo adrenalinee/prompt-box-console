@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ActionIcon, AppShell, Button, Group, Loader, Select, Stack, Text } from "@mantine/core";
+import { ActionIcon, Alert, AppShell, Button, Group, Loader, Select, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { IconSettings } from "@tabler/icons-react";
@@ -11,9 +11,13 @@ import { queryKeys } from "@/lib/query/keys";
 
 export default function RootPage() {
     const router = useRouter();
-    const { data: workspaces = [], isLoading } = useQuery({
+    const { data: workspaces = [], isLoading, isError, error } = useQuery({
         queryKey: queryKeys.workspaces,
-        queryFn: () => fetchWorkspaces(),
+        queryFn: () =>
+            fetchWorkspaces(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
     const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -32,7 +36,7 @@ export default function RootPage() {
         <AppShell header={{ height: 60 }} padding="md">
             <AppShell.Header>
                 <Group h="100%" px="md" justify="space-between">
-                    <Text fw={700}>mostPrompt</Text>
+                <Text fw={700}>PromptBox</Text>
                     <ActionIcon component={Link} href="/settings" variant="light">
                         <IconSettings size={18} />
                     </ActionIcon>
@@ -45,6 +49,12 @@ export default function RootPage() {
                     </Text>
                     {isLoading ? (
                         <Loader />
+                    ) : isError ? (
+                        <Alert color="red" title="오류">
+                            {error && typeof error === "object" && "message" in error
+                                ? String((error as { message?: string }).message)
+                                : "요청에 실패했습니다."}
+                        </Alert>
                     ) : (
                         <Group>
                             <Select

@@ -12,14 +12,14 @@ type HeaderActionsProps = {
 export function HeaderActions({ workspaceId }: HeaderActionsProps) {
     return (
         <Group gap="xs">
-            <Tooltip label="새 Prompt">
+            <Tooltip label="새 Named prompt">
                 <Button
                     component={Link}
                     href={`/workspaces/${workspaceId}/prompts/new`}
                     leftSection={<IconPlus size={16} />}
                     variant="light"
                 >
-                    New Prompt
+                    New Named prompt
                 </Button>
             </Tooltip>
             <Tooltip label="Settings">

@@ -11,6 +11,7 @@ import {
     IconSettings,
     IconKey,
     IconDatabase,
+    IconBuildingStore,
 } from "@tabler/icons-react";
 
 type AppShellNavProps = {
@@ -22,13 +23,14 @@ export function AppShellNav({ workspaceId }: AppShellNavProps) {
     const base = `/workspaces/${workspaceId}`;
 
     const navItems = [
-        { href: `${base}/prompts`, label: "Prompts", icon: IconLayoutList },
         { href: `${base}/playground`, label: "Playground", icon: IconPlayerPlay },
+        { href: `${base}/prompts`, label: "Named prompts", icon: IconLayoutList },
         { href: `${base}/logs`, label: "Logs", icon: IconReceipt },
     ];
 
     const settingsItems = [
         { href: `${base}/settings/api-keys`, label: "API Keys", icon: IconKey },
+        { href: `${base}/settings/vendors`, label: "Vendors", icon: IconBuildingStore },
         { href: `${base}/settings/models`, label: "Models", icon: IconDatabase },
     ];
 
@@ -41,7 +43,7 @@ export function AppShellNav({ workspaceId }: AppShellNavProps) {
                     href={item.href}
                     label={item.label}
                     leftSection={<item.icon size={18} />}
-                    active={pathname === item.href}
+                    active={pathname.startsWith(item.href)}
                 />
             ))}
             <NavLink label="Settings" leftSection={<IconSettings size={18} />} defaultOpened>
@@ -52,7 +54,7 @@ export function AppShellNav({ workspaceId }: AppShellNavProps) {
                         href={item.href}
                         label={item.label}
                         leftSection={<item.icon size={16} />}
-                        active={pathname === item.href}
+                        active={pathname.startsWith(item.href)}
                     />
                 ))}
             </NavLink>

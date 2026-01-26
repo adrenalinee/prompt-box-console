@@ -1,4 +1,4 @@
-import { apiFetch, PageResponse } from "@/lib/api/client";
+import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 
 export type Workspace = {
     id: string;
@@ -26,6 +26,7 @@ export async function fetchWorkspaces(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     params.set("page", String(page));
@@ -34,6 +35,8 @@ export async function fetchWorkspaces(
     if (sort) params.set("sort", sort);
     const response = await apiFetch<PageResponse<Workspace>>(
         `/workspaces?${params.toString()}`,
+        {},
+        config,
     );
     return response.items;
 }
@@ -43,13 +46,14 @@ export async function fetchWorkspacesPage(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("size", String(size));
     if (name) params.set("name", name);
     if (sort) params.set("sort", sort);
-    return apiFetch<PageResponse<Workspace>>(`/workspaces?${params.toString()}`);
+    return apiFetch<PageResponse<Workspace>>(`/workspaces?${params.toString()}`, {}, config);
 }
 
 export async function createWorkspace(payload: { name: string; description?: string }) {
@@ -89,7 +93,7 @@ export async function fetchDefaultOptions(workspaceId: string) {
         return await apiFetch<DefaultOptions>(
             `/workspaces/${workspaceId}/default-options`,
             {},
-            { suppressNotification: true },
+            { suppressNotification: true, suppressAlert: true },
         );
     } catch (error) {
         if (typeof error === "object" && error && "status" in error) {

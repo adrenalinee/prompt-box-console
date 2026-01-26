@@ -18,7 +18,7 @@ const settingsItems = [
     { href: "/settings/vendors", label: "Vendors", icon: IconBuildingStore },
     { href: "/settings/api-keys", label: "API Keys", icon: IconKey },
     { href: "/settings/models", label: "Models", icon: IconDatabase },
-    { href: "/settings/prompts", label: "Prompts", icon: IconLayoutList },
+    { href: "/settings/prompts", label: "Named prompts", icon: IconLayoutList },
     { href: "/settings/logs", label: "Logs", icon: IconReceipt },
 ];
 
@@ -34,7 +34,7 @@ export function SettingsNav() {
                     href={item.href}
                     label={item.label}
                     leftSection={<item.icon size={18} />}
-                    active={pathname === item.href}
+                    active={pathname.startsWith(item.href)}
                 />
             ))}
         </Stack>

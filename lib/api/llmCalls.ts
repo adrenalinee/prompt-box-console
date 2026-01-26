@@ -1,4 +1,4 @@
-import { apiFetch, PageResponse } from "@/lib/api/client";
+import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 
 export type ExecutePayload = {
     workspaceId: string;
@@ -78,6 +78,7 @@ export async function fetchLogsPage(
     page = 0,
     size = 50,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (filters.modelId) params.set("modelId", String(filters.modelId));
@@ -88,6 +89,8 @@ export async function fetchLogsPage(
 
     return apiFetch<PageResponse<CallLog>>(
         `/workspaces/${workspaceId}/llm-calls?${params.toString()}`,
+        {},
+        config,
     );
 }
 
@@ -114,6 +117,7 @@ export async function fetchAllLogsPage(
     page = 0,
     size = 50,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
@@ -122,7 +126,7 @@ export async function fetchAllLogsPage(
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
-    return apiFetch<PageResponse<CallLog>>(`/llm-calls?${params.toString()}`);
+    return apiFetch<PageResponse<CallLog>>(`/llm-calls?${params.toString()}`, {}, config);
 }
 
 export async function fetchLog(callId: string) {

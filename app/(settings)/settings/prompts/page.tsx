@@ -3,6 +3,7 @@
 import React from "react";
 import {
     ActionIcon,
+    Alert,
     Button,
     Group,
     Loader,
@@ -72,10 +73,14 @@ export default function SettingsPromptsPage() {
 
     const { data: workspaces = [], isLoading: workspaceLoading } = useQuery({
         queryKey: queryKeys.workspaces,
-        queryFn: () => fetchWorkspaces(),
+        queryFn: () =>
+            fetchWorkspaces(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
-    const { data: pageData, isLoading } = useQuery({
+    const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [...queryKeys.prompts(workspaceId || "all"), nameFilter, page, size, sort],
         queryFn: () =>
             fetchAllPromptsPage(
@@ -86,6 +91,7 @@ export default function SettingsPromptsPage() {
                 page - 1,
                 size,
                 sort || undefined,
+                { suppressNotification: true, suppressAlert: true },
             ),
     });
 
@@ -147,7 +153,7 @@ export default function SettingsPromptsPage() {
         <Stack>
             <Group justify="space-between">
                 <Text fw={700} size="xl">
-                    Prompts
+                    Named prompts
                 </Text>
                 <Button
                     onClick={() => {
@@ -189,8 +195,14 @@ export default function SettingsPromptsPage() {
             </Group>
             {isLoading ? (
                 <Loader />
+            ) : isError ? (
+                <Alert color="red" title="오류">
+                    {error && typeof error === "object" && "message" in error
+                        ? String((error as { message?: string }).message)
+                        : "요청에 실패했습니다."}
+                </Alert>
             ) : items.length === 0 ? (
-                <Text c="dimmed">등록된 Prompt가 없습니다.</Text>
+                <Text c="dimmed">등록된 Named prompt가 없습니다.</Text>
             ) : (
                 <Table striped highlightOnHover withTableBorder>
                     <Table.Thead>

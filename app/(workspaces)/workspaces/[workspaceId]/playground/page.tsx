@@ -24,9 +24,13 @@ export default function PlaygroundPage() {
     const initialModelId = searchParams.get("modelId") ?? "";
     const initialApiKeyId = searchParams.get("apiKeyId") ?? "";
 
-    const { data: prompts = [], isLoading: promptsLoading } = useQuery({
+    const { data: prompts = [], isLoading: promptsLoading, isError: promptsError, error: promptsErrorDetail } = useQuery({
         queryKey: workspaceId ? queryKeys.prompts(workspaceId) : [],
-        queryFn: () => fetchPrompts(workspaceId || ""),
+        queryFn: () =>
+            fetchPrompts(workspaceId || "", 0, 50, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
         enabled: !!workspaceId,
     });
 
@@ -41,9 +45,10 @@ export default function PlaygroundPage() {
         lastPromptIdRef.current = selectedPromptId;
     }, [selectedPromptId]);
 
-    const { data: refs = [], isLoading: refsLoading } = useQuery({
+    const { data: refs = [], isLoading: refsLoading, isError: refsError, error: refsErrorDetail } = useQuery({
         queryKey: selectedPromptId ? queryKeys.refs(selectedPromptId) : [],
-        queryFn: () => fetchRefs(selectedPromptId),
+        queryFn: () =>
+            fetchRefs(selectedPromptId, 0, 50, { suppressNotification: true, suppressAlert: true }),
         enabled: !!selectedPromptId,
     });
 
@@ -67,26 +72,38 @@ export default function PlaygroundPage() {
         }
     }, [selectedPromptId, selectedRefId, refs, promptDetail]);
 
-    const { data: vendors = [], isLoading: vendorsLoading } = useQuery({
+    const { data: vendors = [], isLoading: vendorsLoading, isError: vendorsError, error: vendorsErrorDetail } = useQuery({
         queryKey: queryKeys.vendors,
-        queryFn: () => fetchVendors(),
+        queryFn: () =>
+            fetchVendors(0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
     });
 
     const [selectedVendorId, setSelectedVendorId] = React.useState<string | null>(null);
     const [selectedModelId, setSelectedModelId] = React.useState<string>(initialModelId);
     const [selectedApiKeyId, setSelectedApiKeyId] = React.useState<string>(initialApiKeyId);
 
-    const { data: models = [], isLoading: modelsLoading } = useQuery({
+    const { data: models = [], isLoading: modelsLoading, isError: modelsError, error: modelsErrorDetail } = useQuery({
         queryKey: workspaceId
             ? queryKeys.workspaceModels(workspaceId, selectedVendorId)
             : [],
-        queryFn: () => fetchWorkspaceModels(workspaceId || "", selectedVendorId || undefined),
+        queryFn: () =>
+            fetchWorkspaceModels(workspaceId || "", selectedVendorId || undefined, 0, 50, undefined, undefined, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
         enabled: !!workspaceId,
     });
 
-    const { data: apiKeys = [], isLoading: apiKeysLoading } = useQuery({
+    const { data: apiKeys = [], isLoading: apiKeysLoading, isError: apiKeysError, error: apiKeysErrorDetail } = useQuery({
         queryKey: workspaceId ? queryKeys.workspaceApiKeys(workspaceId) : [],
-        queryFn: () => fetchWorkspaceApiKeys(workspaceId || ""),
+        queryFn: () =>
+            fetchWorkspaceApiKeys(workspaceId || "", undefined, 0, 50, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
         enabled: !!workspaceId,
     });
 
@@ -102,7 +119,10 @@ export default function PlaygroundPage() {
                 ? ["prompt-additional-inputs", selectedPromptId, selectedRefId]
                 : [],
         queryFn: () =>
-            fetchAdditionalInputs(selectedPromptId, Number(selectedRefId), 0, 100),
+            fetchAdditionalInputs(selectedPromptId, Number(selectedRefId), 0, 100, {
+                suppressNotification: true,
+                suppressAlert: true,
+            }),
         enabled: !!selectedPromptId && !!selectedRefId,
     });
 
@@ -220,18 +240,23 @@ export default function PlaygroundPage() {
                     <ExecutePanel
                         workspaceId={workspaceId}
                         prompts={prompts}
+                        promptsError={promptsError ? promptsErrorDetail : undefined}
                         selectedPromptId={selectedPromptId}
                         onPromptChange={setSelectedPromptId}
                         refs={refs}
+                        refsError={refsError ? refsErrorDetail : undefined}
                         selectedRefId={selectedRefId}
                         onRefChange={setSelectedRefId}
                         models={models}
+                        modelsError={modelsError ? modelsErrorDetail : undefined}
                         selectedModelId={selectedModelId}
                         onModelChange={setSelectedModelId}
                         apiKeys={apiKeys}
+                        apiKeysError={apiKeysError ? apiKeysErrorDetail : undefined}
                         selectedApiKeyId={selectedApiKeyId}
                         onApiKeyChange={setSelectedApiKeyId}
                         vendors={vendors}
+                        vendorsError={vendorsError ? vendorsErrorDetail : undefined}
                         vendorId={selectedVendorId}
                         onVendorChange={setSelectedVendorId}
                         defaultOptions={defaultOptions ?? null}

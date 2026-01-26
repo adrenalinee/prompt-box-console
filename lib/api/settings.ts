@@ -1,4 +1,4 @@
-import { apiFetch, PageResponse } from "@/lib/api/client";
+import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 
 export type ApiKey = {
     id: string;
@@ -66,7 +66,13 @@ export async function deleteApiKey(apiKeyId: string) {
     });
 }
 
-export async function fetchVendors(page = 0, size = 50, name?: string, sort?: string) {
+export async function fetchVendors(
+    page = 0,
+    size = 50,
+    name?: string,
+    sort?: string,
+    config?: ApiFetchConfig,
+) {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("size", String(size));
@@ -74,17 +80,25 @@ export async function fetchVendors(page = 0, size = 50, name?: string, sort?: st
     if (sort) params.set("sort", sort);
     const response = await apiFetch<PageResponse<Vendor>>(
         `/llm-vendors?${params.toString()}`,
+        {},
+        config,
     );
     return response.items;
 }
 
-export async function fetchVendorsPage(page = 0, size = 50, name?: string, sort?: string) {
+export async function fetchVendorsPage(
+    page = 0,
+    size = 50,
+    name?: string,
+    sort?: string,
+    config?: ApiFetchConfig,
+) {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("size", String(size));
     if (name) params.set("name", name);
     if (sort) params.set("sort", sort);
-    return apiFetch<PageResponse<Vendor>>(`/llm-vendors?${params.toString()}`);
+    return apiFetch<PageResponse<Vendor>>(`/llm-vendors?${params.toString()}`, {}, config);
 }
 
 export async function createVendor(payload: { name: string; description?: string }) {
@@ -119,11 +133,14 @@ export async function fetchWorkspaceApiKeys(
     vendorId?: string,
     page = 0,
     size = 50,
+    config?: ApiFetchConfig,
 ) {
     const response = await apiFetch<PageResponse<ApiKey>>(
         `/workspaces/${workspaceId}/llm-api-keys?page=${page}&size=${size}${
             vendorId ? `&vendorId=${vendorId}` : ""
         }`,
+        {},
+        config,
     );
     return response.items;
 }
@@ -135,6 +152,7 @@ export async function fetchWorkspaceApiKeysPage(
     page = 0,
     size = 50,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
@@ -144,6 +162,8 @@ export async function fetchWorkspaceApiKeysPage(
     if (sort) params.set("sort", sort);
     return apiFetch<PageResponse<ApiKey>>(
         `/workspaces/${workspaceId}/llm-api-keys?${params.toString()}`,
+        {},
+        config,
     );
 }
 
@@ -152,6 +172,7 @@ export async function fetchApiKeys(
     page = 0,
     size = 50,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
@@ -161,7 +182,11 @@ export async function fetchApiKeys(
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
 
-    const response = await apiFetch<PageResponse<ApiKey>>(`/llm-api-keys?${params.toString()}`);
+    const response = await apiFetch<PageResponse<ApiKey>>(
+        `/llm-api-keys?${params.toString()}`,
+        {},
+        config,
+    );
     return response.items;
 }
 
@@ -170,6 +195,7 @@ export async function fetchApiKeysPage(
     page = 0,
     size = 50,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
@@ -178,7 +204,7 @@ export async function fetchApiKeysPage(
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
-    return apiFetch<PageResponse<ApiKey>>(`/llm-api-keys?${params.toString()}`);
+    return apiFetch<PageResponse<ApiKey>>(`/llm-api-keys?${params.toString()}`, {}, config);
 }
 
 export async function fetchModels(
@@ -187,6 +213,7 @@ export async function fetchModels(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
@@ -195,7 +222,11 @@ export async function fetchModels(
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
 
-    const response = await apiFetch<PageResponse<Model>>(`/models?${params.toString()}`);
+    const response = await apiFetch<PageResponse<Model>>(
+        `/models?${params.toString()}`,
+        {},
+        config,
+    );
     return response.items;
 }
 
@@ -205,6 +236,7 @@ export async function fetchModelsPage(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
@@ -212,7 +244,7 @@ export async function fetchModelsPage(
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
-    return apiFetch<PageResponse<Model>>(`/models?${params.toString()}`);
+    return apiFetch<PageResponse<Model>>(`/models?${params.toString()}`, {}, config);
 }
 
 export async function fetchModel(modelId: number) {
@@ -250,6 +282,7 @@ export async function fetchWorkspaceModels(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
@@ -260,6 +293,8 @@ export async function fetchWorkspaceModels(
 
     const response = await apiFetch<PageResponse<Model>>(
         `/workspaces/${workspaceId}/models?${params.toString()}`,
+        {},
+        config,
     );
     return response.items;
 }
@@ -271,6 +306,7 @@ export async function fetchWorkspaceModelsPage(
     size = 50,
     name?: string,
     sort?: string,
+    config?: ApiFetchConfig,
 ) {
     const params = new URLSearchParams();
     if (vendorId) params.set("vendorId", vendorId);
@@ -280,6 +316,8 @@ export async function fetchWorkspaceModelsPage(
     if (sort) params.set("sort", sort);
     return apiFetch<PageResponse<Model>>(
         `/workspaces/${workspaceId}/models?${params.toString()}`,
+        {},
+        config,
     );
 }
 

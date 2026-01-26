@@ -24,7 +24,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
                         <Text component={Link} href="/" fw={700}>
-                            mostPrompt
+                            PromptBox
                         </Text>
                         <Text fw={600} c="dimmed">
                             Settings

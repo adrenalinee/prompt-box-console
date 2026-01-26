@@ -3,6 +3,7 @@
 import React from "react";
 import {
     ActionIcon,
+    Alert,
     Badge,
     Button,
     Group,
@@ -19,6 +20,7 @@ import {
     Textarea,
     TextInput,
 } from "@mantine/core";
+import Link from "next/link";
 import { useForm } from "@mantine/form";
 import {
     IconAdjustments,
@@ -69,18 +71,23 @@ export type ExecuteFormValues = {
 type ExecutePanelProps = {
     workspaceId: string;
     prompts: Prompt[];
+    promptsError?: unknown;
     selectedPromptId: string;
     onPromptChange?: (promptId: string) => void;
     refs: PromptRef[];
+    refsError?: unknown;
     selectedRefId: string;
     onRefChange?: (refId: string) => void;
     models: Model[];
+    modelsError?: unknown;
     selectedModelId?: string;
     onModelChange?: (modelId: string) => void;
     apiKeys: ApiKey[];
+    apiKeysError?: unknown;
     selectedApiKeyId?: string;
     onApiKeyChange?: (apiKeyId: string) => void;
     vendors: Vendor[];
+    vendorsError?: unknown;
     vendorId?: string;
     onVendorChange?: (vendorId: string | null) => void;
     defaultOptions?: DefaultOptions | null;
@@ -106,18 +113,23 @@ type ExecutePanelProps = {
 export function ExecutePanel({
     workspaceId,
     prompts,
+    promptsError,
     selectedPromptId,
     onPromptChange,
     refs,
+    refsError,
     selectedRefId,
     onRefChange,
     models,
+    modelsError,
     selectedModelId,
     onModelChange,
     apiKeys,
+    apiKeysError,
     selectedApiKeyId,
     onApiKeyChange,
     vendors,
+    vendorsError,
     vendorId,
     onVendorChange,
     defaultOptions,
@@ -131,6 +143,8 @@ export function ExecutePanel({
     const [createRefOpen, setCreateRefOpen] = React.useState<{
         type: "TAG" | "BRANCH";
     } | null>(null);
+    const [missingModelOpen, setMissingModelOpen] = React.useState(false);
+    const [missingInputOpen, setMissingInputOpen] = React.useState(false);
     const [promptSubmitLocked, setPromptSubmitLocked] = React.useState(false);
     const safeRefs = Array.isArray(refs) ? refs : [];
     const vendorMap = new Map(vendors.map((vendor) => [vendor.id, vendor.name]));
@@ -246,13 +260,25 @@ export function ExecutePanel({
             onModelChange?.("");
             return;
         }
+        const hasApiKeyVendor = new Set(apiKeys.map((key) => key.vendorId));
+        const availableModels = models.filter((model) => hasApiKeyVendor.has(model.vendorId));
         if (!models.find((model) => String(model.id) === form.values.modelId)) {
-            form.setFieldValue("modelId", String(models[0].id));
-            onModelChange?.(String(models[0].id));
+            const fallback = availableModels[0] ?? null;
+            form.setFieldValue("modelId", fallback ? String(fallback.id) : "");
+            onModelChange?.(fallback ? String(fallback.id) : "");
+            return;
+        }
+        if (
+            form.values.modelId &&
+            !availableModels.find((model) => String(model.id) === form.values.modelId)
+        ) {
+            const fallback = availableModels[0] ?? null;
+            form.setFieldValue("modelId", fallback ? String(fallback.id) : "");
+            onModelChange?.(fallback ? String(fallback.id) : "");
             return;
         }
         onModelChange?.(form.values.modelId);
-    }, [models, form.values.modelId, onModelChange]);
+    }, [models, apiKeys, form.values.modelId, onModelChange]);
 
     const selectedModel = models.find((model) => String(model.id) === form.values.modelId);
 
@@ -394,6 +420,17 @@ export function ExecutePanel({
         <form
             id="playground-execute-form"
             onSubmit={form.onSubmit((values) => {
+                if (!values.modelId || !values.apiKeyId) {
+                    setMissingModelOpen(true);
+                    return;
+                }
+                const hasAnyInput =
+                    values.instructions.trim().length > 0 ||
+                    values.inputItems.some((item) => item.message.trim().length > 0);
+                if (!hasAnyInput) {
+                    setMissingInputOpen(true);
+                    return;
+                }
                 const options = {
                     temperature: values.overrideOptions.temperature ?? undefined,
                     topP: values.overrideOptions.topP ?? undefined,
@@ -624,6 +661,13 @@ export function ExecutePanel({
                 size="lg"
             >
                 <Stack>
+                    {promptsError && (
+                        <Alert color="red" title="오류">
+                            {promptsError && typeof promptsError === "object" && "message" in promptsError
+                                ? String((promptsError as { message?: string }).message)
+                                : "요청에 실패했습니다."}
+                        </Alert>
+                    )}
                     <TextInput
                         placeholder="Prompt 검색"
                         leftSection={<IconSearch size={16} />}
@@ -689,6 +733,13 @@ export function ExecutePanel({
                 title={selectedPrompt ? `${selectedPrompt.name} · Ref 선택` : "Ref 선택"}
                 size="lg"
             >
+                {refsError && (
+                    <Alert color="red" title="오류" mb="sm">
+                        {refsError && typeof refsError === "object" && "message" in refsError
+                            ? String((refsError as { message?: string }).message)
+                            : "요청에 실패했습니다."}
+                    </Alert>
+                )}
                 <Tabs defaultValue="BRANCH">
                     <Tabs.List>
                         <Tabs.Tab value="BRANCH">Branches</Tabs.Tab>
@@ -767,6 +818,34 @@ export function ExecutePanel({
                 size="xl"
             >
                 <Stack>
+                    {(vendorsError || modelsError || apiKeysError) && (
+                        <Alert color="red" title="오류">
+                            {vendorsError && typeof vendorsError === "object" && "message" in vendorsError
+                                ? String((vendorsError as { message?: string }).message)
+                                : modelsError && typeof modelsError === "object" && "message" in modelsError
+                                ? String((modelsError as { message?: string }).message)
+                                : apiKeysError && typeof apiKeysError === "object" && "message" in apiKeysError
+                                ? String((apiKeysError as { message?: string }).message)
+                                : "요청에 실패했습니다."}
+                        </Alert>
+                    )}
+                    {!apiKeysError && apiKeyOptions.length === 0 && (
+                        <Alert color="yellow" title="API Key 없음">
+                            <Stack gap="xs">
+                                <Text>사용 가능한 API Key가 없습니다. 먼저 API Key를 등록해주세요.</Text>
+                                <Group justify="flex-end">
+                                    <Button
+                                        size="xs"
+                                        variant="light"
+                                        component={Link}
+                                        href={`/workspaces/${workspaceId}/settings/api-keys`}
+                                    >
+                                        API Keys 설정
+                                    </Button>
+                                </Group>
+                            </Stack>
+                        </Alert>
+                    )}
                     <Group grow>
                         <Select
                             label="Vendor"
@@ -792,7 +871,7 @@ export function ExecutePanel({
                             form.setFieldValue("apiKeyId", value ?? "");
                             onApiKeyChange?.(value ?? "");
                         }}
-                        clearable
+                        allowDeselect={false}
                     />
                     <ScrollArea h={360}>
                         <Table striped highlightOnHover>
@@ -1106,6 +1185,34 @@ export function ExecutePanel({
                         >
                             생성
                         </Button>
+                    </Group>
+                </Stack>
+            </Modal>
+
+            <Modal
+                opened={missingModelOpen}
+                onClose={() => setMissingModelOpen(false)}
+                title="모델 선택 필요"
+                centered
+            >
+                <Stack>
+                    <Text>모델과 API Key를 선택한 후 실행해주세요.</Text>
+                    <Group justify="flex-end">
+                        <Button onClick={() => setMissingModelOpen(false)}>확인</Button>
+                    </Group>
+                </Stack>
+            </Modal>
+
+            <Modal
+                opened={missingInputOpen}
+                onClose={() => setMissingInputOpen(false)}
+                title="입력 필요"
+                centered
+            >
+                <Stack>
+                    <Text>Instructions 또는 Input Items 중 하나 이상을 입력해주세요.</Text>
+                    <Group justify="flex-end">
+                        <Button onClick={() => setMissingInputOpen(false)}>확인</Button>
                     </Group>
                 </Stack>
             </Modal>

@@ -3,6 +3,7 @@
 import React from "react";
 import {
     ActionIcon,
+    Alert,
     Button,
     Group,
     Loader,
@@ -75,10 +76,16 @@ export default function WorkspacesPage() {
         [searchParams, router, pathname],
     );
 
-    const { data: pageData, isLoading } = useQuery({
+    const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [...queryKeys.workspaces, nameFilter, page, size, sort],
         queryFn: () =>
-            fetchWorkspacesPage(page - 1, size, nameFilter || undefined, sort || undefined),
+            fetchWorkspacesPage(
+                page - 1,
+                size,
+                nameFilter || undefined,
+                sort || undefined,
+                { suppressNotification: true, suppressAlert: true },
+            ),
     });
 
     const { data: detail } = useQuery({
@@ -200,6 +207,12 @@ export default function WorkspacesPage() {
 
             {isLoading ? (
                 <Loader />
+            ) : isError ? (
+                <Alert color="red" title="오류">
+                    {error && typeof error === "object" && "message" in error
+                        ? String((error as { message?: string }).message)
+                        : "요청에 실패했습니다."}
+                </Alert>
             ) : items.length === 0 ? (
                 <Text c="dimmed">등록된 Workspace가 없습니다.</Text>
             ) : (
