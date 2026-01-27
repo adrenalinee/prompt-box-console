@@ -7,7 +7,7 @@ import { useSearchParams, useParams, usePathname, useRouter } from "next/navigat
 import { IconArrowsDiff, IconPlayerPlay } from "@tabler/icons-react";
 import { fetchAdditionalInputs, fetchPrompt, fetchPrompts, fetchRefs } from "@/lib/api/prompts";
 import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
-import { executeCall } from "@/lib/api/llmCalls";
+import { executeCallStream, LlmStreamEvent } from "@/lib/api/llmCalls";
 import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel } from "@/components/playground/ExecutePanel";
 import { OutputPanel } from "@/components/playground/OutputPanel";
@@ -128,6 +128,67 @@ export default function PlaygroundPage() {
 
     const [outputText, setOutputText] = React.useState<string>("");
     const [callId, setCallId] = React.useState<string>("");
+    const [outputError, setOutputError] = React.useState<string>("");
+    const outputItemsRef = React.useRef<{
+        idToIndex: Map<string, number>;
+        indexToText: Map<number, string>;
+        nextIndex: number;
+    }>({
+        idToIndex: new Map(),
+        indexToText: new Map(),
+        nextIndex: 0,
+    });
+
+    const resetOutputState = React.useCallback(() => {
+        outputItemsRef.current = {
+            idToIndex: new Map(),
+            indexToText: new Map(),
+            nextIndex: 0,
+        };
+        setOutputText("");
+        setCallId("");
+        setOutputError("");
+    }, []);
+
+    const ensureIndexForId = React.useCallback((id?: string, index?: number) => {
+        const state = outputItemsRef.current;
+        if (!id) {
+            if (typeof index === "number") {
+                if (!state.indexToText.has(index)) {
+                    state.indexToText.set(index, "");
+                }
+            }
+            return index ?? null;
+        }
+        if (state.idToIndex.has(id)) {
+            return state.idToIndex.get(id) ?? null;
+        }
+        const resolvedIndex = typeof index === "number" ? index : state.nextIndex;
+        state.idToIndex.set(id, resolvedIndex);
+        if (!state.indexToText.has(resolvedIndex)) {
+            state.indexToText.set(resolvedIndex, "");
+        }
+        state.nextIndex = Math.max(state.nextIndex, resolvedIndex + 1);
+        return resolvedIndex;
+    }, []);
+
+    const rebuildOutputText = React.useCallback(() => {
+        const entries = Array.from(outputItemsRef.current.indexToText.entries()).sort(
+            ([a], [b]) => a - b,
+        );
+        const combined = entries.map(([, text]) => text).join("\n\n");
+        setOutputText(combined);
+    }, []);
+
+    const resolveErrorMessage = React.useCallback((error: unknown) => {
+        if (!error) return "요청 중 문제가 발생했습니다.";
+        if (typeof error === "string") return error;
+        if (typeof error === "object" && "message" in error) {
+            const message = (error as { message?: string }).message;
+            if (message) return message;
+        }
+        return "요청 중 문제가 발생했습니다.";
+    }, []);
 
     React.useEffect(() => {
         const params = new URLSearchParams(searchParams.toString());
@@ -168,7 +229,7 @@ export default function PlaygroundPage() {
     ]);
 
     const executeMutation = useMutation({
-        mutationFn: (payload: {
+        mutationFn: async (payload: {
             refId?: number;
             instructions?: string;
             modelId: string;
@@ -183,19 +244,60 @@ export default function PlaygroundPage() {
                 verbosity?: string;
                 summary?: string;
             };
-        }) =>
-            executeCall({
-                workspaceId: workspaceId || "",
-                llmModelId: Number(payload.modelId),
-                llmApiKeyId: payload.apiKeyId,
-                promptRefId: payload.refId,
-                rawInstructionsText: payload.instructions,
-                inputItems: payload.inputItems,
-                overrideOptions: payload.overrideOptions,
-            }),
-        onSuccess: (result) => {
-            setOutputText("");
-            setCallId(result.llmCallLogId);
+        }) => {
+            resetOutputState();
+            return executeCallStream(
+                {
+                    workspaceId: workspaceId || "",
+                    llmModelId: Number(payload.modelId),
+                    llmApiKeyId: payload.apiKeyId,
+                    promptRefId: payload.refId,
+                    rawInstructionsText: payload.instructions,
+                    inputItems: payload.inputItems,
+                    overrideOptions: payload.overrideOptions,
+                },
+                {
+                    onEvent: (event: LlmStreamEvent) => {
+                        if (event.callLogId) {
+                            setCallId(event.callLogId);
+                        }
+                        if (event.type === "message.added") {
+                            ensureIndexForId(event.id, event.index);
+                            rebuildOutputText();
+                            return;
+                        }
+                        if (event.type === "message.delta") {
+                            const index = ensureIndexForId(event.id, event.index);
+                            if (typeof index === "number" && typeof event.delta === "string") {
+                                const current =
+                                    outputItemsRef.current.indexToText.get(index) ?? "";
+                                outputItemsRef.current.indexToText.set(
+                                    index,
+                                    `${current}${event.delta}`,
+                                );
+                                rebuildOutputText();
+                            }
+                            return;
+                        }
+                        if (event.type === "message.done") {
+                            const index = ensureIndexForId(event.id, event.index);
+                            if (typeof index === "number") {
+                                outputItemsRef.current.indexToText.set(
+                                    index,
+                                    event.outputText ?? "",
+                                );
+                                rebuildOutputText();
+                            }
+                        }
+                    },
+                    onError: (error) => {
+                        setOutputError(resolveErrorMessage(error));
+                    },
+                },
+            );
+        },
+        onError: (error) => {
+            setOutputError(resolveErrorMessage(error));
         },
     });
 
@@ -265,7 +367,12 @@ export default function PlaygroundPage() {
                     />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 6 }}>
-                    <OutputPanel outputText={outputText} callId={callId} workspaceId={workspaceId} />
+                    <OutputPanel
+                        outputText={outputText}
+                        callId={callId}
+                        workspaceId={workspaceId}
+                        errorMessage={outputError}
+                    />
                 </Grid.Col>
             </Grid>
         </Stack>

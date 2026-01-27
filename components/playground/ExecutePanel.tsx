@@ -182,6 +182,43 @@ export function ExecutePanel({
         },
     });
 
+    const normalizeInputItems = React.useCallback((items: InputItemForm[]) => {
+        let next = items.map((item) => ({ ...item }));
+        if (next.length === 0) {
+            next = [{ role: "USER", message: "" }];
+        }
+        while (next.length > 1) {
+            const last = next[next.length - 1];
+            const prev = next[next.length - 2];
+            if (last.message.trim() === "" && prev.message.trim() === "") {
+                next.pop();
+            } else {
+                break;
+            }
+        }
+        const last = next[next.length - 1];
+        if (last.message.trim() !== "") {
+            next.push({ role: "USER", message: "" });
+        }
+        return next;
+    }, []);
+
+    const updateInputMessage = React.useCallback(
+        (index: number, value: string) => {
+            const items = form.values.inputItems.map((item, idx) =>
+                idx === index ? { ...item, message: value } : item,
+            );
+            if (index === items.length - 1 && value.trim().length > 0) {
+                items.push({ role: "USER", message: "" });
+            }
+            if (index === items.length - 2 && value.trim().length === 0) {
+                items.splice(index, 1);
+            }
+            form.setFieldValue("inputItems", normalizeInputItems(items));
+        },
+        [form, normalizeInputItems],
+    );
+
     const promptForm = useForm({
         initialValues: {
             name: "",
@@ -245,14 +282,29 @@ export function ExecutePanel({
                 role: item.role,
                 message: item.message,
             }));
-            form.setFieldValue("inputItems", nextItems);
+            form.setFieldValue("inputItems", normalizeInputItems(nextItems));
             setRefBaselineInputs(nextItems);
         } else {
             const defaultItems = [{ role: "USER", message: "" }];
-            form.setFieldValue("inputItems", defaultItems);
-            setRefBaselineInputs(defaultItems);
+            form.setFieldValue("inputItems", normalizeInputItems(defaultItems));
+            setRefBaselineInputs([]);
         }
-    }, [selectedRefId, additionalInputs]);
+    }, [selectedRefId, additionalInputs, normalizeInputItems]);
+
+    React.useEffect(() => {
+        const normalized = normalizeInputItems(form.values.inputItems);
+        const current = form.values.inputItems;
+        const isSame =
+            normalized.length === current.length &&
+            normalized.every(
+                (item, index) =>
+                    item.message === current[index]?.message &&
+                    item.role === current[index]?.role,
+            );
+        if (!isSame) {
+            form.setFieldValue("inputItems", normalized);
+        }
+    }, [form.values.inputItems, normalizeInputItems, form]);
 
     React.useEffect(() => {
         if (!models.length) {
@@ -368,24 +420,30 @@ export function ExecutePanel({
           }`
         : "-";
 
+    const effectiveInputItems = React.useMemo(
+        () => form.values.inputItems.filter((item) => item.message.trim().length > 0),
+        [form.values.inputItems],
+    );
     const hasPromptContent =
-        form.values.instructions.trim().length > 0 ||
-        form.values.inputItems.some((item) => item.message.trim().length > 0);
+        form.values.instructions.trim().length > 0 || effectiveInputItems.length > 0;
     const isModified =
         !!form.values.promptId &&
         !!form.values.refId &&
         (form.values.instructions.trim() !== refBaselineInstructions.trim() ||
-            JSON.stringify(form.values.inputItems) !== JSON.stringify(refBaselineInputs));
+            JSON.stringify(effectiveInputItems) !== JSON.stringify(refBaselineInputs));
     const canUseRefActions = !!form.values.promptId && !!form.values.refId;
     const canSaveChanges = canUseRefActions && isModified && selectedRef?.type === "BRANCH";
     const canCreateTag = canUseRefActions && selectedRef?.type === "BRANCH";
     const canCreateBranch =
         canUseRefActions &&
         (selectedRef?.type === "TAG" || (selectedRef?.type === "BRANCH" && isModified));
+    const hasInvalidInputItems = form.values.inputItems
+        .slice(0, -1)
+        .some((item) => item.message.trim().length === 0);
 
     const syncAdditionalInputs = async (promptId: string, refId: number) => {
         const existing = additionalInputs ?? [];
-        const next = form.values.inputItems.map((item, index) => ({
+        const next = effectiveInputItems.map((item, index) => ({
             position: index + 1,
             role: item.role,
             message: item.message,
@@ -430,9 +488,11 @@ export function ExecutePanel({
                     setMissingModelOpen(true);
                     return;
                 }
+                const effectiveItems = values.inputItems.filter(
+                    (item) => item.message.trim().length > 0,
+                );
                 const hasAnyInput =
-                    values.instructions.trim().length > 0 ||
-                    values.inputItems.some((item) => item.message.trim().length > 0);
+                    values.instructions.trim().length > 0 || effectiveItems.length > 0;
                 if (!hasAnyInput) {
                     setMissingInputOpen(true);
                     return;
@@ -457,7 +517,7 @@ export function ExecutePanel({
                     instructions: useRef ? undefined : values.instructions || undefined,
                     modelId: values.modelId,
                     apiKeyId: values.apiKeyId,
-                    inputItems: values.inputItems,
+                    inputItems: effectiveItems,
                     overrideOptions: hasOptions ? options : undefined,
                 });
             })}
@@ -612,21 +672,12 @@ export function ExecutePanel({
                 />
 
                 <Stack gap="xs">
-                    <Group justify="space-between">
-                        <Text fw={600}>Input Items</Text>
-                        <Button
-                            size="xs"
-                            variant="light"
-                            onClick={() =>
-                                form.insertListItem("inputItems", {
-                                    role: "USER",
-                                    message: "",
-                                })
-                            }
-                        >
-                            입력 추가
-                        </Button>
-                    </Group>
+                    <Text fw={600}>Input Items</Text>
+                    {hasInvalidInputItems && (
+                        <Alert color="yellow" variant="light">
+                            message가 비어 있으면 안됩니다. 필요없는 input item이라면 삭제해주세요.
+                        </Alert>
+                    )}
                     {form.values.inputItems.map((item, index) => (
                         <Paper key={`input-${index}`} withBorder p="sm">
                             <Group justify="space-between" align="center">
@@ -662,7 +713,10 @@ export function ExecutePanel({
                                 label="Message"
                                 minRows={3}
                                 autosize
-                                {...form.getInputProps(`inputItems.${index}.message`)}
+                                value={item.message}
+                                onChange={(event) =>
+                                    updateInputMessage(index, event.currentTarget.value)
+                                }
                             />
                         </Paper>
                     ))}
@@ -1108,7 +1162,7 @@ export function ExecutePanel({
                                         description: values.description.trim() || undefined,
                                         instructions: form.values.instructions,
                                         mainRefName: values.mainRefName.trim() || "main",
-                                        additionalInputs: form.values.inputItems.map((item, index) => ({
+                                        additionalInputs: effectiveInputItems.map((item, index) => ({
                                             position: index + 1,
                                             role: item.role,
                                             message: item.message,

@@ -136,8 +136,13 @@ export default function ApiKeysPage() {
                 workspaceId,
                 ...values,
             }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.workspaceApiKeys(workspaceId) });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                predicate: (query) =>
+                    Array.isArray(query.queryKey?.[0]) &&
+                    query.queryKey[0][0] === "workspaceApiKeys" &&
+                    query.queryKey[0][1] === workspaceId,
+            });
             setModalOpen(false);
             form.reset();
         },
@@ -159,16 +164,26 @@ export default function ApiKeysPage() {
             value?: string;
             description?: string;
         }) => updateApiKey(editing?.id || "", values),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.workspaceApiKeys(workspaceId) });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                predicate: (query) =>
+                    Array.isArray(query.queryKey?.[0]) &&
+                    query.queryKey[0][0] === "workspaceApiKeys" &&
+                    query.queryKey[0][1] === workspaceId,
+            });
             setEditing(null);
         },
     });
 
     const deleteMutation = useMutation({
         mutationFn: (apiKeyId: string) => deleteApiKey(apiKeyId),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.workspaceApiKeys(workspaceId) });
+        onSuccess: async () => {
+            await queryClient.invalidateQueries({
+                predicate: (query) =>
+                    Array.isArray(query.queryKey?.[0]) &&
+                    query.queryKey[0][0] === "workspaceApiKeys" &&
+                    query.queryKey[0][1] === workspaceId,
+            });
         },
     });
 
