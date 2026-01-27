@@ -27,18 +27,30 @@ export type ExecuteResult = {
 };
 
 export type LlmStreamEvent = {
-    type: "message.added" | "message.delta" | "message.done" | string;
+    type:
+        | "log.created"
+        | "message.added"
+        | "message.delta"
+        | "message.done"
+        | "reasoning.added"
+        | "reasoning.delta"
+        | "reasoning.done"
+        | string;
     id?: string;
+    createdAt?: string;
     index?: number;
     delta?: string;
     sequence?: number;
     outputText?: string;
     callLogId?: string;
+    contentIndex?: number;
+    part?: "TEXT" | "SUMMARY" | string;
 };
 
 export type ExecuteStreamHandlers = {
     onEvent?: (event: LlmStreamEvent) => void;
     onError?: (error: unknown) => void;
+    onComplete?: () => void;
 };
 
 export type CallLog = {
@@ -190,6 +202,8 @@ export async function executeCallStream(
     if (buffer.trim().length) {
         emitEvent(buffer);
     }
+
+    handlers.onComplete?.();
 }
 
 export async function fetchLogs(

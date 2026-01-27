@@ -7,10 +7,10 @@ import { useSearchParams, useParams, usePathname, useRouter } from "next/navigat
 import { IconArrowsDiff, IconPlayerPlay } from "@tabler/icons-react";
 import { fetchAdditionalInputs, fetchPrompt, fetchPrompts, fetchRefs } from "@/lib/api/prompts";
 import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
-import { executeCallStream, LlmStreamEvent } from "@/lib/api/llmCalls";
+import { executeCallStream, fetchLog, LlmStreamEvent } from "@/lib/api/llmCalls";
 import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel } from "@/components/playground/ExecutePanel";
-import { OutputPanel } from "@/components/playground/OutputPanel";
+import { OutputPanel, type OutputBlock } from "@/components/playground/OutputPanel";
 import { fetchDefaultOptions } from "@/lib/api/workspaces";
 
 export default function PlaygroundPage() {
@@ -126,27 +126,40 @@ export default function PlaygroundPage() {
         enabled: !!selectedPromptId && !!selectedRefId,
     });
 
-    const [outputText, setOutputText] = React.useState<string>("");
+    const [outputBlocks, setOutputBlocks] = React.useState<OutputBlock[]>([]);
     const [callId, setCallId] = React.useState<string>("");
     const [outputError, setOutputError] = React.useState<string>("");
+    const callIdRef = React.useRef<string>("");
+    const requestStartedAtRef = React.useRef<number>(0);
     const outputItemsRef = React.useRef<{
         idToIndex: Map<string, number>;
-        indexToText: Map<number, string>;
+        indexToItem: Map<
+            number,
+            {
+                text: string;
+                kind: "message" | "reasoning";
+                part?: string;
+                firstDeltaAt?: number;
+                doneAt?: number;
+            }
+        >;
         nextIndex: number;
     }>({
         idToIndex: new Map(),
-        indexToText: new Map(),
+        indexToItem: new Map(),
         nextIndex: 0,
     });
 
     const resetOutputState = React.useCallback(() => {
         outputItemsRef.current = {
             idToIndex: new Map(),
-            indexToText: new Map(),
+            indexToItem: new Map(),
             nextIndex: 0,
         };
-        setOutputText("");
+        requestStartedAtRef.current = Date.now();
+        setOutputBlocks([]);
         setCallId("");
+        callIdRef.current = "";
         setOutputError("");
     }, []);
 
@@ -154,8 +167,8 @@ export default function PlaygroundPage() {
         const state = outputItemsRef.current;
         if (!id) {
             if (typeof index === "number") {
-                if (!state.indexToText.has(index)) {
-                    state.indexToText.set(index, "");
+                if (!state.indexToItem.has(index)) {
+                    state.indexToItem.set(index, { text: "", kind: "message" });
                 }
             }
             return index ?? null;
@@ -165,19 +178,32 @@ export default function PlaygroundPage() {
         }
         const resolvedIndex = typeof index === "number" ? index : state.nextIndex;
         state.idToIndex.set(id, resolvedIndex);
-        if (!state.indexToText.has(resolvedIndex)) {
-            state.indexToText.set(resolvedIndex, "");
+        if (!state.indexToItem.has(resolvedIndex)) {
+            state.indexToItem.set(resolvedIndex, { text: "", kind: "message" });
         }
         state.nextIndex = Math.max(state.nextIndex, resolvedIndex + 1);
         return resolvedIndex;
     }, []);
 
-    const rebuildOutputText = React.useCallback(() => {
-        const entries = Array.from(outputItemsRef.current.indexToText.entries()).sort(
+    const rebuildOutputBlocks = React.useCallback(() => {
+        const entries = Array.from(outputItemsRef.current.indexToItem.entries()).sort(
             ([a], [b]) => a - b,
         );
-        const combined = entries.map(([, text]) => text).join("\n\n");
-        setOutputText(combined);
+        const blocks: OutputBlock[] = entries.map(([index, item]) => ({
+            index,
+            text: item.text,
+            kind: item.kind,
+            part: item.part,
+            firstDeltaMs:
+                item.firstDeltaAt && requestStartedAtRef.current
+                    ? item.firstDeltaAt - requestStartedAtRef.current
+                    : undefined,
+            doneMs:
+                item.doneAt && requestStartedAtRef.current
+                    ? item.doneAt - requestStartedAtRef.current
+                    : undefined,
+        }));
+        setOutputBlocks(blocks);
     }, []);
 
     const resolveErrorMessage = React.useCallback((error: unknown) => {
@@ -258,40 +284,87 @@ export default function PlaygroundPage() {
                 },
                 {
                     onEvent: (event: LlmStreamEvent) => {
-                        if (event.callLogId) {
-                            setCallId(event.callLogId);
-                        }
-                        if (event.type === "message.added") {
-                            ensureIndexForId(event.id, event.index);
-                            rebuildOutputText();
+                        if (event.type === "log.created" && event.id) {
+                            callIdRef.current = event.id;
+                            setCallId(event.id);
                             return;
                         }
-                        if (event.type === "message.delta") {
+                        if (event.callLogId) {
+                            callIdRef.current = event.callLogId;
+                            setCallId(event.callLogId);
+                        }
+                        const isReasoning = event.type.startsWith("reasoning.");
+                        const kind: "message" | "reasoning" = isReasoning ? "reasoning" : "message";
+                        if (event.type === "message.added" || event.type === "reasoning.added") {
                             const index = ensureIndexForId(event.id, event.index);
-                            if (typeof index === "number" && typeof event.delta === "string") {
-                                const current =
-                                    outputItemsRef.current.indexToText.get(index) ?? "";
-                                outputItemsRef.current.indexToText.set(
-                                    index,
-                                    `${current}${event.delta}`,
-                                );
-                                rebuildOutputText();
+                            if (typeof index === "number") {
+                                const current = outputItemsRef.current.indexToItem.get(index);
+                                outputItemsRef.current.indexToItem.set(index, {
+                                    text: current?.text ?? "",
+                                    kind,
+                                    part: isReasoning ? event.part : undefined,
+                                    firstDeltaAt: current?.firstDeltaAt,
+                                    doneAt: current?.doneAt,
+                                });
+                                rebuildOutputBlocks();
                             }
                             return;
                         }
-                        if (event.type === "message.done") {
+                        if (event.type === "message.delta" || event.type === "reasoning.delta") {
+                            const index = ensureIndexForId(event.id, event.index);
+                            if (typeof index === "number" && typeof event.delta === "string") {
+                                const current = outputItemsRef.current.indexToItem.get(index);
+                                const now = Date.now();
+                                outputItemsRef.current.indexToItem.set(index, {
+                                    text: `${current?.text ?? ""}${event.delta}`,
+                                    kind,
+                                    part: isReasoning ? event.part ?? current?.part : undefined,
+                                    firstDeltaAt: current?.firstDeltaAt ?? now,
+                                    doneAt: current?.doneAt,
+                                });
+                                rebuildOutputBlocks();
+                            }
+                            return;
+                        }
+                        if (event.type === "message.done" || event.type === "reasoning.done") {
                             const index = ensureIndexForId(event.id, event.index);
                             if (typeof index === "number") {
-                                outputItemsRef.current.indexToText.set(
-                                    index,
-                                    event.outputText ?? "",
-                                );
-                                rebuildOutputText();
+                                const current = outputItemsRef.current.indexToItem.get(index);
+                                const nextText = event.outputText ?? current?.text ?? "";
+                                const now = Date.now();
+                                outputItemsRef.current.indexToItem.set(index, {
+                                    text: nextText,
+                                    kind,
+                                    part: isReasoning ? event.part ?? current?.part : undefined,
+                                    firstDeltaAt: current?.firstDeltaAt ?? now,
+                                    doneAt: now,
+                                });
+                                rebuildOutputBlocks();
                             }
                         }
                     },
                     onError: (error) => {
                         setOutputError(resolveErrorMessage(error));
+                    },
+                    onComplete: async () => {
+                        const id = callIdRef.current;
+                        if (!id) return;
+                        try {
+                            const detail = await fetchLog(id);
+                            const items = (detail.outputItems ?? [])
+                                .slice()
+                                .sort((a, b) => a.position - b.position);
+                            if (!items.length) return;
+                            setOutputBlocks(
+                                items.map((item) => ({
+                                    index: item.position - 1,
+                                    kind: "message",
+                                    text: item.outputText,
+                                })),
+                            );
+                        } catch {
+                            // global error handlers will surface the issue
+                        }
                     },
                 },
             );
@@ -359,7 +432,7 @@ export default function PlaygroundPage() {
                         onApiKeyChange={setSelectedApiKeyId}
                         vendors={vendors}
                         vendorsError={vendorsError ? vendorsErrorDetail : undefined}
-                        vendorId={selectedVendorId}
+                        vendorId={selectedVendorId ?? undefined}
                         onVendorChange={setSelectedVendorId}
                         defaultOptions={defaultOptions ?? null}
                         additionalInputs={additionalInputs}
@@ -368,10 +441,11 @@ export default function PlaygroundPage() {
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 6 }}>
                     <OutputPanel
-                        outputText={outputText}
+                        blocks={outputBlocks}
                         callId={callId}
                         workspaceId={workspaceId}
                         errorMessage={outputError}
+                        isStreaming={executeMutation.isPending}
                     />
                 </Grid.Col>
             </Grid>
