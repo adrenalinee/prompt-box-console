@@ -15,6 +15,7 @@ import {
     Table,
     Text,
     TextInput,
+    Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -192,15 +193,23 @@ export default function SettingsApiKeysPage() {
                 <Text fw={700} size="xl">
                     API Keys
                 </Text>
-                <Button
-                    onClick={() => {
-                        form.reset();
-                        setModalOpen(true);
-                    }}
-                    disabled={!workspaceId}
+                <Tooltip
+                    label="먼저 Workspace를 검색/선택해야 생성할 수 있습니다."
+                    disabled={!!workspaceId}
+                    withArrow
                 >
-                    새 API Key
-                </Button>
+                    <div>
+                        <Button
+                            onClick={() => {
+                                form.reset();
+                                setModalOpen(true);
+                            }}
+                            disabled={!workspaceId}
+                        >
+                            새 API Key
+                        </Button>
+                    </div>
+                </Tooltip>
             </Group>
 
             <Group grow>

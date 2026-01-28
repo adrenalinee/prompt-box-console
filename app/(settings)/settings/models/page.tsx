@@ -16,6 +16,7 @@ import {
     Table,
     Text,
     TextInput,
+    Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -184,15 +185,23 @@ export default function SettingsModelsPage() {
                 <Text fw={700} size="xl">
                     Models
                 </Text>
-                <Button
-                    onClick={() => {
-                        form.reset();
-                        setModalOpen(true);
-                    }}
-                    disabled={!vendorId}
+                <Tooltip
+                    label="먼저 Vendor를 검색/선택해야 생성할 수 있습니다."
+                    disabled={!!vendorId}
+                    withArrow
                 >
-                    새 Model
-                </Button>
+                    <div>
+                        <Button
+                            onClick={() => {
+                                form.reset();
+                                setModalOpen(true);
+                            }}
+                            disabled={!vendorId}
+                        >
+                            새 Model
+                        </Button>
+                    </div>
+                </Tooltip>
             </Group>
             <Group grow>
                 <Select

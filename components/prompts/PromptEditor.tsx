@@ -8,12 +8,18 @@ type PromptEditorProps = {
     initialInstructions: string;
     onSave: (instructions: string) => void;
     isSaving?: boolean;
+    formId?: string;
+    hideLabel?: boolean;
+    hideSaveButton?: boolean;
 };
 
 export function PromptEditor({
     initialInstructions,
     onSave,
     isSaving,
+    formId = "prompt-editor-form",
+    hideLabel,
+    hideSaveButton,
 }: PromptEditorProps) {
     const form = useForm({
         initialValues: {
@@ -27,22 +33,25 @@ export function PromptEditor({
 
     return (
         <form
+            id={formId}
             onSubmit={form.onSubmit((values) => {
                 onSave(values.instructions);
             })}
         >
             <Stack>
                 <Textarea
-                    label="Instructions"
+                    label={hideLabel ? undefined : "Instructions"}
                     autosize
                     minRows={12}
                     {...form.getInputProps("instructions")}
                 />
-                <Group justify="flex-end">
-                    <Button type="submit" loading={isSaving}>
-                        저장
-                    </Button>
-                </Group>
+                {!hideSaveButton && (
+                    <Group justify="flex-end">
+                        <Button type="submit" loading={isSaving}>
+                            저장
+                        </Button>
+                    </Group>
+                )}
             </Stack>
         </form>
     );

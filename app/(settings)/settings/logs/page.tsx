@@ -2,25 +2,24 @@
 
 import React from "react";
 import {
-    ActionIcon,
     Alert,
     Button,
     Group,
     Loader,
-    Menu,
     Modal,
     Pagination,
     Select,
     Stack,
     Table,
     Text,
+    Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
-import { IconDotsVertical } from "@tabler/icons-react";
+import { IconExternalLink } from "@tabler/icons-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CodeHighlight } from "@mantine/code-highlight";
 import { fetchAllLogsPage, fetchLog } from "@/lib/api/llmCalls";
-import { fetchModels, fetchVendors } from "@/lib/api/settings";
+import { fetchModels } from "@/lib/api/settings";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
 
@@ -30,7 +29,6 @@ export default function SettingsLogsPage() {
     const searchParams = useSearchParams();
 
     const workspaceId = searchParams.get("workspaceId") ?? "";
-    const vendorId = searchParams.get("vendorId") ?? "";
     const modelId = searchParams.get("modelId") ?? "";
     const status = searchParams.get("status") ?? "";
     const page = Number(searchParams.get("page") || "1");
@@ -63,19 +61,10 @@ export default function SettingsLogsPage() {
             }),
     });
 
-    const { data: vendors = [] } = useQuery({
-        queryKey: queryKeys.vendors,
-        queryFn: () =>
-            fetchVendors(0, 50, undefined, undefined, {
-                suppressNotification: true,
-                suppressAlert: true,
-            }),
-    });
-
     const { data: models = [] } = useQuery({
-        queryKey: queryKeys.models(vendorId || null),
+        queryKey: queryKeys.models(null),
         queryFn: () =>
-            fetchModels(vendorId || undefined, 0, 50, undefined, undefined, {
+            fetchModels(undefined, 0, 50, undefined, undefined, {
                 suppressNotification: true,
                 suppressAlert: true,
             }),
@@ -113,11 +102,6 @@ export default function SettingsLogsPage() {
         label: workspace.name,
     }));
 
-    const vendorOptions = vendors.map((vendor) => ({
-        value: vendor.id,
-        label: vendor.name,
-    }));
-
     const modelOptions = models.map((model) => ({
         value: String(model.id),
         label: model.modelKey,
@@ -138,14 +122,6 @@ export default function SettingsLogsPage() {
                     value={workspaceId || null}
                     onChange={(value) => updateParam("workspaceId", value)}
                     disabled={workspaceLoading}
-                    clearable
-                />
-                <Select
-                    label="Vendor"
-                    placeholder="전체"
-                    data={vendorOptions}
-                    value={vendorId || null}
-                    onChange={(value) => updateParam("vendorId", value)}
                     clearable
                 />
                 <Select
@@ -196,10 +172,11 @@ export default function SettingsLogsPage() {
                         <Table.Tr>
                             <Table.Th>ID</Table.Th>
                             <Table.Th>Workspace</Table.Th>
+                            <Table.Th>Instructions Preview</Table.Th>
                             <Table.Th>Model</Table.Th>
                             <Table.Th>Status</Table.Th>
+                            <Table.Th>Created</Table.Th>
                             <Table.Th>Elapsed</Table.Th>
-                            <Table.Th>Error</Table.Th>
                             <Table.Th ta="right">Actions</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
@@ -208,10 +185,17 @@ export default function SettingsLogsPage() {
                             <Table.Tr key={log.id}>
                                 <Table.Td>{log.id}</Table.Td>
                                 <Table.Td>{log.workspaceId ?? "-"}</Table.Td>
+                                <Table.Td>
+                                    <Tooltip label={log.instructionsPreview ?? "-"} withArrow>
+                                        <Text lineClamp={2}>
+                                            {log.instructionsPreview ?? "-"}
+                                        </Text>
+                                    </Tooltip>
+                                </Table.Td>
                                 <Table.Td>{log.llmModelId ?? "-"}</Table.Td>
                                 <Table.Td>{log.status ?? "-"}</Table.Td>
+                                <Table.Td>{log.createdAt ?? "-"}</Table.Td>
                                 <Table.Td>{log.elapsed ?? "-"}</Table.Td>
-                                <Table.Td>{log.errorMessage ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
                                         <Button
@@ -221,17 +205,6 @@ export default function SettingsLogsPage() {
                                         >
                                             상세
                                         </Button>
-                                        <Menu shadow="md" position="bottom-end">
-                                            <Menu.Target>
-                                                <ActionIcon variant="light">
-                                                    <IconDotsVertical size={16} />
-                                                </ActionIcon>
-                                            </Menu.Target>
-                                            <Menu.Dropdown>
-                                                <Menu.Item disabled>수정</Menu.Item>
-                                                <Menu.Item disabled>삭제</Menu.Item>
-                                            </Menu.Dropdown>
-                                        </Menu>
                                     </Group>
                                 </Table.Td>
                             </Table.Tr>
@@ -266,8 +239,26 @@ export default function SettingsLogsPage() {
                 title="Log 상세"
                 size="xl"
             >
-                <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+                <Stack>
+                    <Group justify="space-between">
+                        <Text fw={600}>Raw JSON</Text>
+                        {detail?.callLog?.workspaceId && (
+                            <Button
+                                variant="light"
+                                leftSection={<IconExternalLink size={16} />}
+                                component="a"
+                                target="_blank"
+                                rel="noreferrer"
+                                href={`/workspaces/${detail.callLog.workspaceId}/logs/${detail.callLog.id}`}
+                            >
+                                워크스페이스에서 상세보기
+                            </Button>
+                        )}
+                    </Group>
+                    <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+                </Stack>
             </Modal>
+
         </Stack>
     );
 }

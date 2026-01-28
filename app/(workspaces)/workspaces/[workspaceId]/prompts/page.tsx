@@ -153,12 +153,6 @@ export default function PromptsPage() {
                                             </Menu.Target>
                                             <Menu.Dropdown>
                                                 <Menu.Item
-                                                    component={Link}
-                                                    href={`/workspaces/${workspaceId}/prompts/${prompt.id}`}
-                                                >
-                                                    수정
-                                                </Menu.Item>
-                                                <Menu.Item
                                                     color="red"
                                                     onClick={() =>
                                                         setDeleteTarget({

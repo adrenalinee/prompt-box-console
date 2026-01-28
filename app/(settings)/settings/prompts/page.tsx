@@ -7,8 +7,8 @@ import {
     Button,
     Group,
     Loader,
-    Menu,
     Modal,
+    Menu,
     Pagination,
     Select,
     Stack,
@@ -16,10 +16,11 @@ import {
     Text,
     TextInput,
     Textarea,
+    Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconDotsVertical } from "@tabler/icons-react";
+import { IconDotsVertical, IconExternalLink } from "@tabler/icons-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CodeHighlight } from "@mantine/code-highlight";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
@@ -28,7 +29,6 @@ import {
     deletePrompt,
     fetchAllPromptsPage,
     fetchPrompt,
-    updatePrompt,
 } from "@/lib/api/prompts";
 import { queryKeys } from "@/lib/query/keys";
 
@@ -39,11 +39,6 @@ export default function SettingsPromptsPage() {
     const queryClient = useQueryClient();
 
     const [createOpen, setCreateOpen] = React.useState(false);
-    const [editing, setEditing] = React.useState<{
-        id: string;
-        name?: string;
-        description?: string;
-    } | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<{ id: string; name?: string } | null>(
         null,
     );
@@ -96,7 +91,7 @@ export default function SettingsPromptsPage() {
     });
 
     const { data: detail } = useQuery({
-        queryKey: detailId ? ["prompt", detailId] : [],
+        queryKey: detailId ? queryKeys.prompt(detailId) : [],
         queryFn: () => fetchPrompt(detailId),
         enabled: !!detailId,
     });
@@ -109,13 +104,6 @@ export default function SettingsPromptsPage() {
         },
     });
 
-    const editForm = useForm({
-        initialValues: {
-            name: "",
-            description: "",
-        },
-    });
-
     const createMutation = useMutation({
         mutationFn: (values: { name: string; description?: string; instructions: string }) =>
             createPrompt(workspaceId, values),
@@ -123,15 +111,6 @@ export default function SettingsPromptsPage() {
             queryClient.invalidateQueries({ queryKey: queryKeys.prompts(workspaceId || "all") });
             setCreateOpen(false);
             form.reset();
-        },
-    });
-
-    const updateMutation = useMutation({
-        mutationFn: (values: { name?: string; description?: string }) =>
-            updatePrompt(editing?.id || "", values),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.prompts(workspaceId || "all") });
-            setEditing(null);
         },
     });
 
@@ -155,15 +134,23 @@ export default function SettingsPromptsPage() {
                 <Text fw={700} size="xl">
                     Named prompts
                 </Text>
-                <Button
-                    onClick={() => {
-                        form.reset();
-                        setCreateOpen(true);
-                    }}
-                    disabled={!workspaceId}
+                <Tooltip
+                    label="먼저 Workspace를 검색/선택해야 생성할 수 있습니다."
+                    disabled={!!workspaceId}
+                    withArrow
                 >
-                    새 Prompt
-                </Button>
+                    <div>
+                        <Button
+                            onClick={() => {
+                                form.reset();
+                                setCreateOpen(true);
+                            }}
+                            disabled={!workspaceId}
+                        >
+                            새 Prompt
+                        </Button>
+                    </div>
+                </Tooltip>
             </Group>
             <Group grow>
                 <Select
@@ -238,21 +225,6 @@ export default function SettingsPromptsPage() {
                                             </Menu.Target>
                                             <Menu.Dropdown>
                                                 <Menu.Item
-                                                    onClick={() => {
-                                                        setEditing({
-                                                            id: prompt.id,
-                                                            name: prompt.name,
-                                                            description: prompt.description,
-                                                        });
-                                                        editForm.setValues({
-                                                            name: prompt.name ?? "",
-                                                            description: prompt.description ?? "",
-                                                        });
-                                                    }}
-                                                >
-                                                    수정
-                                                </Menu.Item>
-                                                <Menu.Item
                                                     color="red"
                                                     onClick={() =>
                                                         setDeleteTarget({
@@ -299,7 +271,24 @@ export default function SettingsPromptsPage() {
                 title="Prompt 상세"
                 size="xl"
             >
-                <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+                <Stack>
+                    <Group justify="space-between">
+                        <Text fw={600}>Raw JSON</Text>
+                        {detail?.workspaceId && (
+                            <Button
+                                variant="light"
+                                leftSection={<IconExternalLink size={16} />}
+                                component="a"
+                                target="_blank"
+                                rel="noreferrer"
+                                href={`/workspaces/${detail.workspaceId}/prompts/${detail.id}`}
+                            >
+                                워크스페이스에서 상세보기
+                            </Button>
+                        )}
+                    </Group>
+                    <CodeHighlight code={detail ? JSON.stringify(detail, null, 2) : ""} language="json" />
+                </Stack>
             </Modal>
 
             <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Prompt 등록">
@@ -316,20 +305,6 @@ export default function SettingsPromptsPage() {
                         <Group justify="flex-end">
                             <Button type="submit" loading={createMutation.isPending}>
                                 등록
-                            </Button>
-                        </Group>
-                    </Stack>
-                </form>
-            </Modal>
-
-            <Modal opened={!!editing} onClose={() => setEditing(null)} title="Prompt 수정">
-                <form onSubmit={editForm.onSubmit((values) => updateMutation.mutate(values))}>
-                    <Stack>
-                        <TextInput label="Name" {...editForm.getInputProps("name")} />
-                        <TextInput label="Description" {...editForm.getInputProps("description")} />
-                        <Group justify="flex-end">
-                            <Button type="submit" loading={updateMutation.isPending}>
-                                수정
                             </Button>
                         </Group>
                     </Stack>

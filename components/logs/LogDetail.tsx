@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CopyButton, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { CopyButton, Group, Paper, Spoiler, Stack, Text, Title } from "@mantine/core";
 import { CodeHighlight } from "@mantine/code-highlight";
 import type { CallLogDetail } from "@/lib/api/llmCalls";
 
@@ -19,6 +19,8 @@ function renderJson(value: unknown) {
 
 export function LogDetail({ log }: LogDetailProps) {
     const callLog = log.callLog;
+    const errorMessage = callLog.errorMessage ?? "";
+    const instructions = callLog.instructions ?? "";
 
     return (
         <Stack>
@@ -30,22 +32,57 @@ export function LogDetail({ log }: LogDetailProps) {
                     <Text>API Key: {callLog.llmApiKeyId ?? "-"}</Text>
                     <Text>Status: {callLog.status ?? "-"}</Text>
                     <Text>Elapsed: {callLog.elapsed ?? "-"}</Text>
-                    <Text>Error: {callLog.errorMessage ?? "-"}</Text>
                 </Stack>
             </Paper>
 
             <Paper p="md" withBorder>
                 <Group justify="space-between" mb="xs">
-                    <Text fw={600}>Instructions</Text>
-                    <CopyButton value={callLog.instructions ?? ""}>
+                    <Text fw={600}>Error Message</Text>
+                    <CopyButton value={errorMessage}>
                         {({ copied, copy }) => (
-                            <Text onClick={copy} c={copied ? "teal" : "blue"} style={{ cursor: "pointer" }}>
+                            <Text
+                                onClick={copy}
+                                c={copied ? "teal" : "blue"}
+                                style={{ cursor: "pointer" }}
+                            >
                                 {copied ? "Copied" : "Copy"}
                             </Text>
                         )}
                     </CopyButton>
                 </Group>
-                <CodeHighlight code={callLog.instructions ?? ""} language="text" />
+                <Spoiler maxHeight={96} showLabel="더 보기" hideLabel="접기">
+                    <Text
+                        component="pre"
+                        style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                    >
+                        {errorMessage || "-"}
+                    </Text>
+                </Spoiler>
+            </Paper>
+
+            <Paper p="md" withBorder>
+                <Group justify="space-between" mb="xs">
+                    <Text fw={600}>Instructions</Text>
+                    <CopyButton value={instructions}>
+                        {({ copied, copy }) => (
+                            <Text
+                                onClick={copy}
+                                c={copied ? "teal" : "blue"}
+                                style={{ cursor: "pointer" }}
+                            >
+                                {copied ? "Copied" : "Copy"}
+                            </Text>
+                        )}
+                    </CopyButton>
+                </Group>
+                <Spoiler maxHeight={96} showLabel="더 보기" hideLabel="접기">
+                    <Text
+                        component="pre"
+                        style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                    >
+                        {instructions || "-"}
+                    </Text>
+                </Spoiler>
             </Paper>
 
             <Paper p="md" withBorder>

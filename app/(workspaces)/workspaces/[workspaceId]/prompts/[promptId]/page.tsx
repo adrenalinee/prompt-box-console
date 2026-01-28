@@ -18,11 +18,12 @@ import {
     Text,
     TextInput,
     Textarea,
+    Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconArrowsDiff, IconDotsVertical, IconGitBranch } from "@tabler/icons-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     addAdditionalInput,
@@ -85,11 +86,15 @@ function buildLineDiff(left: string, right: string): DiffRow[] {
 export default function PromptDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const promptId = params?.promptId as string;
     const workspaceId = params?.workspaceId as string;
     const queryClient = useQueryClient();
+    const refIdParam = searchParams.get("refId");
+    const refIdFromQuery = refIdParam ? Number(refIdParam) : null;
 
-    const [selectedRefId, setSelectedRefId] = React.useState<number | null>(null);
+    const [selectedRefId, setSelectedRefId] = React.useState<number | null>(refIdFromQuery);
     const [refPickerOpen, setRefPickerOpen] = React.useState(false);
     const [createRefState, setCreateRefState] = React.useState<CreateRefState>({
         opened: false,
@@ -133,12 +138,30 @@ export default function PromptDetailPage() {
         if (selectedRefId && refs.some((ref) => ref.id === selectedRefId)) {
             return;
         }
+        if (refIdFromQuery && refs.some((ref) => ref.id === refIdFromQuery)) {
+            setSelectedRefId(refIdFromQuery);
+            return;
+        }
         const fallbackRef =
             refs.find((ref) => ref.id === prompt?.defaultBranchRefId) ??
             refs.find((ref) => ref.type === "BRANCH") ??
             refs[0];
         setSelectedRefId(fallbackRef?.id ?? null);
-    }, [refs, prompt?.defaultBranchRefId, selectedRefId]);
+    }, [refs, prompt?.defaultBranchRefId, selectedRefId, refIdFromQuery]);
+
+    React.useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (selectedRefId) {
+            params.set("refId", String(selectedRefId));
+        } else {
+            params.delete("refId");
+        }
+        const next = params.toString();
+        const current = searchParams.toString();
+        if (next !== current) {
+            router.replace(next ? `${pathname}?${next}` : pathname);
+        }
+    }, [selectedRefId, searchParams, router, pathname]);
 
     const { data: additionalInputs = [], isLoading: additionalInputsLoading } = useQuery({
         queryKey: queryKeys.additionalInputs(promptId, selectedRefId),
@@ -387,29 +410,48 @@ export default function PromptDetailPage() {
                                 기본 브랜치
                             </Text>
                         )}
+                        {latestTagRefId && selectedRef?.id === latestTagRefId && (
+                            <Text size="sm" c="dimmed">
+                                최신 태그
+                            </Text>
+                        )}
                     </Group>
                     <Group>
-                        <Button
-                            variant="default"
-                            onClick={() => setCreateRefState({ opened: true, type: "BRANCH" })}
-                            disabled={!selectedRef}
-                        >
-                            새 Branch
-                        </Button>
-                        <Button
-                            variant="default"
-                            onClick={() => setCreateRefState({ opened: true, type: "TAG" })}
-                            disabled={!selectedRef || selectedRef?.type === "TAG"}
-                        >
-                            Tag
-                        </Button>
-                        <Button
-                            component={Link}
-                            href={`/workspaces/${workspaceId}/playground?promptId=${promptId}${selectedRef ? `&refId=${selectedRef.id}` : ""}`}
-                            disabled={!selectedRef}
-                        >
-                            Playground
-                        </Button>
+                        <Tooltip label="현재 수정된 내용으로 새로운 branch 를 생성합니다." withArrow>
+                            <div>
+                                <Button
+                                    variant="default"
+                                    onClick={() =>
+                                        setCreateRefState({ opened: true, type: "BRANCH" })
+                                    }
+                                    disabled={!selectedRef}
+                                >
+                                    새 Branch
+                                </Button>
+                            </div>
+                        </Tooltip>
+                        <Tooltip label="현재 branch 의 내용을 태그로 고정합니다." withArrow>
+                            <div>
+                                <Button
+                                    variant="default"
+                                    onClick={() => setCreateRefState({ opened: true, type: "TAG" })}
+                                    disabled={!selectedRef || selectedRef?.type === "TAG"}
+                                >
+                                    Tag
+                                </Button>
+                            </div>
+                        </Tooltip>
+                        <Tooltip label="Playground 에서 현재 branch 를 테스트합니다." withArrow>
+                            <div>
+                                <Button
+                                    component={Link}
+                                    href={`/workspaces/${workspaceId}/playground?promptId=${promptId}${selectedRef ? `&refId=${selectedRef.id}` : ""}`}
+                                    disabled={!selectedRef}
+                                >
+                                    Playground
+                                </Button>
+                            </div>
+                        </Tooltip>
                         <Menu position="bottom-end" shadow="md" width={200}>
                             <Menu.Target>
                                 <ActionIcon variant="subtle" aria-label="ref menu">
@@ -423,6 +465,9 @@ export default function PromptDetailPage() {
                                 >
                                     수정
                                 </Menu.Item>
+                                {selectedRef && !selectedIsBranch && (
+                                    <Menu.Label>태그는 수정 할 수 없습니다.</Menu.Label>
+                                )}
                                 <Menu.Item
                                     color="red"
                                     onClick={() => selectedRef && setDeleteTarget(selectedRef)}
@@ -432,6 +477,9 @@ export default function PromptDetailPage() {
                                 </Menu.Item>
                                 {isDefaultBranch && (
                                     <Menu.Label>기본 브랜치는 삭제할 수 없습니다.</Menu.Label>
+                                )}
+                                {selectedRef && !selectedIsBranch && (
+                                    <Menu.Label>태그는 삭제 할 수 없습니다.</Menu.Label>
                                 )}
                             </Menu.Dropdown>
                         </Menu>
@@ -443,7 +491,19 @@ export default function PromptDetailPage() {
 
             <Stack gap="xl">
                 <Stack gap="sm">
-                    <Text fw={600}>Instructions</Text>
+                    <Group justify="space-between" align="center">
+                        <Text fw={600}>Instructions</Text>
+                        {selectedRef && selectedIsBranch && (
+                            <Button
+                                size="xs"
+                                type="submit"
+                                form="prompt-editor-form"
+                                loading={updateRefMutation.isPending}
+                            >
+                                저장
+                            </Button>
+                        )}
+                    </Group>
                     {refsLoading ? (
                         <Loader />
                     ) : !selectedRef ? (
@@ -452,6 +512,9 @@ export default function PromptDetailPage() {
                         </Alert>
                     ) : selectedIsBranch ? (
                         <PromptEditor
+                            formId="prompt-editor-form"
+                            hideLabel
+                            hideSaveButton
                             initialInstructions={selectedRef.instructions}
                             onSave={(instructions) =>
                                 updateRefMutation.mutate({
@@ -463,7 +526,6 @@ export default function PromptDetailPage() {
                         />
                     ) : (
                         <Textarea
-                            label="Instructions"
                             value={selectedRef.instructions}
                             minRows={10}
                             autosize

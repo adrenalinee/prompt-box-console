@@ -59,8 +59,10 @@ export type CallLog = {
     llmModelId?: number;
     llmApiKeyId?: string;
     promptRefId?: number;
+    createdAt?: string;
+    instructionsPreview?: string;
     elapsed?: number;
-    status?: "SUCCESS" | "ERROR" | "TIMEOUT" | "CANCELLED";
+    status?: "PENDING" | "RUNNING" | "SUCCESS" | "ERROR" | "TIMEOUT" | "CANCELLED";
     errorCode?: string;
     errorMessage?: string;
     llmCallOptions?: string;
@@ -87,6 +89,23 @@ function parseJsonSafe(text: string) {
     } catch {
         return null;
     }
+}
+
+function extractMessageFromSse(text: string) {
+    const normalized = text.replace(/\r\n/g, "\n");
+    const dataLines = normalized
+        .split("\n")
+        .filter((line) => line.startsWith("data:"))
+        .map((line) => line.slice(5).trim())
+        .filter(Boolean);
+    if (!dataLines.length) return "";
+    const joined = dataLines.join("\n");
+    const parsed = parseJsonSafe(joined);
+    if (parsed && typeof parsed === "object" && "message" in parsed) {
+        const msg = (parsed as { message?: string }).message;
+        return msg?.trim() || "";
+    }
+    return joined.trim();
 }
 
 function handleStreamError(error: unknown, config: ApiFetchConfig = {}) {
@@ -131,11 +150,27 @@ export async function executeCallStream(
     }
 
     if (!response.ok) {
-        const text = await response.text();
-        const bodyJson = parseJsonSafe(text);
+        const contentType = response.headers.get("content-type") || "";
+        let parsedMessage = "";
+        if (contentType.includes("application/json")) {
+            try {
+                const bodyJson = (await response.json()) as { message?: string } | null;
+                parsedMessage = bodyJson?.message?.trim() || "";
+            } catch {
+                parsedMessage = "";
+            }
+        }
+        if (!parsedMessage) {
+            const text = await response.text();
+            const bodyJson = parseJsonSafe(text);
+            parsedMessage =
+                bodyJson?.message ||
+                (contentType.includes("text/event-stream") ? extractMessageFromSse(text) : "") ||
+                text?.trim() ||
+                "";
+        }
         const message =
-            bodyJson?.message ||
-            text?.trim() ||
+            parsedMessage ||
             response.statusText ||
             "요청에 실패했습니다.";
         const error = new Error(message);

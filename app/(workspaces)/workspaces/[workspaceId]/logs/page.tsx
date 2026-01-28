@@ -1,10 +1,10 @@
 "use client";
 
 import React from "react";
-import { Alert, Button, Group, Loader, Pagination, Select, Stack, Table, Text } from "@mantine/core";
+import { Alert, Button, Group, Loader, Pagination, Select, Stack, Table, Text, Tooltip } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLogsPage } from "@/lib/api/llmCalls";
-import { fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
+import { fetchWorkspaceModels } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -15,28 +15,16 @@ export default function LogsPage() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    const vendorId = searchParams.get("vendorId") ?? "";
     const modelId = searchParams.get("modelId") ?? "";
     const status = searchParams.get("status") ?? "";
     const page = Number(searchParams.get("page") || "1");
     const size = Number(searchParams.get("size") || "20");
     const sort = searchParams.get("sort") || "";
 
-    const { data: vendors = [] } = useQuery({
-        queryKey: queryKeys.vendors,
-        queryFn: () =>
-            fetchVendors(0, 50, undefined, undefined, {
-                suppressNotification: true,
-                suppressAlert: true,
-            }),
-    });
-
     const { data: models = [] } = useQuery({
-        queryKey: workspaceId
-            ? queryKeys.workspaceModels(workspaceId, vendorId)
-            : [],
+        queryKey: workspaceId ? queryKeys.workspaceModels(workspaceId) : [],
         queryFn: () =>
-            fetchWorkspaceModels(workspaceId || "", vendorId || undefined, 0, 50, undefined, undefined, {
+            fetchWorkspaceModels(workspaceId || "", undefined, 0, 50, undefined, undefined, {
                 suppressNotification: true,
                 suppressAlert: true,
             }),
@@ -81,11 +69,6 @@ export default function LogsPage() {
         enabled: !!workspaceId,
     });
 
-    const vendorOptions = vendors.map((vendor) => ({
-        value: vendor.id,
-        label: vendor.name,
-    }));
-
     const modelOptions = models.map((model) => ({
         value: String(model.id),
         label: `${model.modelKey}`,
@@ -101,14 +84,6 @@ export default function LogsPage() {
                 Logs
             </Text>
             <Group grow>
-                <Select
-                    label="Vendor"
-                    placeholder="전체"
-                    data={vendorOptions}
-                    value={vendorId || null}
-                    onChange={(value) => updateParam("vendorId", value)}
-                    clearable
-                />
                 <Select
                     label="Model"
                     placeholder="전체"
@@ -156,10 +131,11 @@ export default function LogsPage() {
                     <Table.Thead>
                         <Table.Tr>
                             <Table.Th>ID</Table.Th>
+                            <Table.Th>Instructions Preview</Table.Th>
                             <Table.Th>Model</Table.Th>
                             <Table.Th>Status</Table.Th>
+                            <Table.Th>Created</Table.Th>
                             <Table.Th>Elapsed</Table.Th>
-                            <Table.Th>Error</Table.Th>
                             <Table.Th ta="right">Actions</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
@@ -167,10 +143,17 @@ export default function LogsPage() {
                         {(pageData?.items ?? []).map((log) => (
                             <Table.Tr key={log.id}>
                                 <Table.Td>{log.id}</Table.Td>
+                                <Table.Td>
+                                    <Tooltip label={log.instructionsPreview ?? "-"} withArrow>
+                                        <Text lineClamp={2}>
+                                            {log.instructionsPreview ?? "-"}
+                                        </Text>
+                                    </Tooltip>
+                                </Table.Td>
                                 <Table.Td>{log.llmModelId ?? "-"}</Table.Td>
                                 <Table.Td>{log.status ?? "-"}</Table.Td>
+                                <Table.Td>{log.createdAt ?? "-"}</Table.Td>
                                 <Table.Td>{log.elapsed ?? "-"}</Table.Td>
-                                <Table.Td>{log.errorMessage ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Button
                                         size="xs"
