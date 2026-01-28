@@ -21,6 +21,18 @@ export function LogDetail({ log }: LogDetailProps) {
     const callLog = log.callLog;
     const errorMessage = callLog.errorMessage ?? "";
     const instructions = callLog.instructions ?? "";
+    const llmCallOptions = callLog.llmCallOptions ?? "";
+    const llmCallOptionsJson = renderJson(
+        llmCallOptions ? parseJsonSafe(llmCallOptions) ?? llmCallOptions : llmCallOptions,
+    );
+
+    function parseJsonSafe(text: string) {
+        try {
+            return JSON.parse(text);
+        } catch {
+            return null;
+        }
+    }
 
     return (
         <Stack>
@@ -83,6 +95,24 @@ export function LogDetail({ log }: LogDetailProps) {
                         {instructions || "-"}
                     </Text>
                 </Spoiler>
+            </Paper>
+
+            <Paper p="md" withBorder>
+                <Group justify="space-between" mb="xs">
+                    <Text fw={600}>LLM Call Options</Text>
+                    <CopyButton value={llmCallOptions}>
+                        {({ copied, copy }) => (
+                            <Text
+                                onClick={copy}
+                                c={copied ? "teal" : "blue"}
+                                style={{ cursor: "pointer" }}
+                            >
+                                {copied ? "Copied" : "Copy"}
+                            </Text>
+                        )}
+                    </CopyButton>
+                </Group>
+                <CodeHighlight code={llmCallOptionsJson} language="json" />
             </Paper>
 
             <Paper p="md" withBorder>

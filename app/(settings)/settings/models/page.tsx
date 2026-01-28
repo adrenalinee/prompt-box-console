@@ -44,6 +44,7 @@ export default function SettingsModelsPage() {
         id: number;
         name?: string;
         modelKey?: string;
+        modelType?: "STANDARD" | "REASONING";
         contextWindow?: number;
         inputPrice?: number;
         outputPrice?: number;
@@ -115,6 +116,7 @@ export default function SettingsModelsPage() {
         initialValues: {
             name: "",
             modelKey: "",
+            modelType: "STANDARD",
             contextWindow: null as number | null,
             inputPrice: null as number | null,
             outputPrice: null as number | null,
@@ -126,6 +128,7 @@ export default function SettingsModelsPage() {
         mutationFn: (values: {
             name: string;
             modelKey: string;
+            modelType: "STANDARD" | "REASONING";
             contextWindow?: number;
             inputPrice?: number;
             outputPrice?: number;
@@ -147,6 +150,7 @@ export default function SettingsModelsPage() {
             vendorId: "",
             name: "",
             modelKey: "",
+            modelType: "STANDARD",
             contextWindow: null as number | null,
             inputPrice: null as number | null,
             outputPrice: null as number | null,
@@ -159,6 +163,7 @@ export default function SettingsModelsPage() {
             vendorId?: string;
             name?: string;
             modelKey?: string;
+            modelType?: "STANDARD" | "REASONING";
             contextWindow?: number;
             inputPrice?: number;
             outputPrice?: number;
@@ -247,6 +252,7 @@ export default function SettingsModelsPage() {
                             <Table.Th>Vendor</Table.Th>
                             <Table.Th>Name</Table.Th>
                             <Table.Th>Model Key</Table.Th>
+                            <Table.Th>Model Type</Table.Th>
                             <Table.Th>Description</Table.Th>
                             <Table.Th ta="right">Actions</Table.Th>
                         </Table.Tr>
@@ -259,6 +265,7 @@ export default function SettingsModelsPage() {
                                 </Table.Td>
                                 <Table.Td>{model.name ?? "-"}</Table.Td>
                                 <Table.Td>{model.modelKey}</Table.Td>
+                                <Table.Td>{model.modelType ?? "-"}</Table.Td>
                                 <Table.Td>{model.description ?? "-"}</Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
@@ -282,6 +289,7 @@ export default function SettingsModelsPage() {
                                                             id: model.id,
                                                             name: model.name,
                                                             modelKey: model.modelKey,
+                                                            modelType: model.modelType,
                                                             contextWindow: model.contextWindow,
                                                             inputPrice: model.inputPrice,
                                                             outputPrice: model.outputPrice,
@@ -292,6 +300,7 @@ export default function SettingsModelsPage() {
                                                             vendorId: model.vendorId,
                                                             name: model.name ?? "",
                                                             modelKey: model.modelKey ?? "",
+                                                            modelType: model.modelType ?? "STANDARD",
                                                             contextWindow: model.contextWindow ?? null,
                                                             inputPrice: model.inputPrice ?? null,
                                                             outputPrice: model.outputPrice ?? null,
@@ -358,6 +367,7 @@ export default function SettingsModelsPage() {
                         mutation.mutate({
                             name: values.name,
                             modelKey: values.modelKey,
+                            modelType: values.modelType,
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -368,6 +378,20 @@ export default function SettingsModelsPage() {
                     <Stack>
                         <TextInput label="Name" required {...form.getInputProps("name")} />
                         <TextInput label="Model Key" required {...form.getInputProps("modelKey")} />
+                        <Select
+                            label="Model Type"
+                            data={[
+                                { value: "STANDARD", label: "STANDARD" },
+                                { value: "REASONING", label: "REASONING" },
+                            ]}
+                            value={form.values.modelType}
+                            onChange={(value) =>
+                                form.setFieldValue(
+                                    "modelType",
+                                    (value as "STANDARD" | "REASONING") || "STANDARD",
+                                )
+                            }
+                        />
                         <NumberInput
                             label="Context Window"
                             min={0}
@@ -400,6 +424,7 @@ export default function SettingsModelsPage() {
                             vendorId: values.vendorId || undefined,
                             name: values.name || undefined,
                             modelKey: values.modelKey || undefined,
+                            modelType: values.modelType || undefined,
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -415,6 +440,20 @@ export default function SettingsModelsPage() {
                         />
                         <TextInput label="Name" {...editForm.getInputProps("name")} />
                         <TextInput label="Model Key" {...editForm.getInputProps("modelKey")} />
+                        <Select
+                            label="Model Type"
+                            data={[
+                                { value: "STANDARD", label: "STANDARD" },
+                                { value: "REASONING", label: "REASONING" },
+                            ]}
+                            value={editForm.values.modelType}
+                            onChange={(value) =>
+                                editForm.setFieldValue(
+                                    "modelType",
+                                    (value as "STANDARD" | "REASONING") || "STANDARD",
+                                )
+                            }
+                        />
                         <NumberInput
                             label="Context Window"
                             min={0}

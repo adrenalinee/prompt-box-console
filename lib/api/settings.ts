@@ -13,6 +13,7 @@ export type Model = {
     vendorId: string;
     name?: string;
     modelKey: string;
+    modelType?: "STANDARD" | "REASONING";
     contextWindow?: number;
     inputPrice?: number;
     outputPrice?: number;
@@ -257,6 +258,7 @@ export async function updateModel(
         vendorId?: string;
         name?: string;
         modelKey?: string;
+        modelType?: "STANDARD" | "REASONING";
         contextWindow?: number;
         inputPrice?: number;
         outputPrice?: number;
@@ -325,6 +327,7 @@ export async function createModel(payload: {
     vendorId: string;
     name: string;
     modelKey: string;
+    modelType: "STANDARD" | "REASONING";
     contextWindow?: number;
     inputPrice?: number;
     outputPrice?: number;

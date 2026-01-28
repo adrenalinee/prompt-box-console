@@ -149,6 +149,7 @@ export default function ModelsPage() {
                             <Table.Th>Vendor</Table.Th>
                             <Table.Th>Name</Table.Th>
                             <Table.Th>Model Key</Table.Th>
+                            <Table.Th>Model Type</Table.Th>
                             <Table.Th>Context Window</Table.Th>
                             <Table.Th>Input Price</Table.Th>
                             <Table.Th>Output Price</Table.Th>
@@ -162,6 +163,7 @@ export default function ModelsPage() {
                                 <Table.Td>{vendorMap.get(model.vendorId) ?? model.vendorId}</Table.Td>
                                 <Table.Td>{model.name}</Table.Td>
                                 <Table.Td>{model.modelKey}</Table.Td>
+                                <Table.Td>{model.modelType ?? "-"}</Table.Td>
                                 <Table.Td>{model.contextWindow ?? "-"}</Table.Td>
                                 <Table.Td>{model.inputPrice ?? "-"}</Table.Td>
                                 <Table.Td>{model.outputPrice ?? "-"}</Table.Td>
