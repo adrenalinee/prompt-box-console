@@ -355,13 +355,30 @@ export default function PlaygroundPage() {
                                 .slice()
                                 .sort((a, b) => a.position - b.position);
                             if (!items.length) return;
-                            setOutputBlocks(
-                                items.map((item) => ({
-                                    index: item.position - 1,
-                                    kind: "message",
+                            const messageIndexes = Array.from(
+                                outputItemsRef.current.indexToItem.entries(),
+                            )
+                                .filter(([, value]) => value.kind === "message")
+                                .map(([index]) => index)
+                                .sort((a, b) => a - b);
+                            const maxIndex =
+                                messageIndexes.length > 0
+                                    ? Math.max(...messageIndexes)
+                                    : outputItemsRef.current.nextIndex - 1;
+                            items.forEach((item, itemIndex) => {
+                                const index =
+                                    messageIndexes[itemIndex] ??
+                                    maxIndex + 1 + (itemIndex - messageIndexes.length);
+                                const current = outputItemsRef.current.indexToItem.get(index);
+                                outputItemsRef.current.indexToItem.set(index, {
                                     text: item.outputText,
-                                })),
-                            );
+                                    kind: "message",
+                                    part: current?.part,
+                                    firstDeltaAt: current?.firstDeltaAt,
+                                    doneAt: current?.doneAt ?? Date.now(),
+                                });
+                            });
+                            rebuildOutputBlocks();
                         } catch {
                             // global error handlers will surface the issue
                         }
