@@ -4,6 +4,7 @@ export type Workspace = {
     id: string;
     name: string;
     description?: string;
+    defaultModelId?: number;
 };
 
 export type DefaultOptions = {
@@ -74,7 +75,7 @@ export async function fetchWorkspace(workspaceId: string, includeDefaultOptions 
 
 export async function updateWorkspace(
     workspaceId: string,
-    payload: { name?: string; description?: string },
+    payload: { name?: string; description?: string; defaultModelId?: number | null },
 ) {
     return apiFetch<Workspace>(`/workspaces/${workspaceId}`, {
         method: "PATCH",

@@ -9,7 +9,7 @@ export type ApiKey = {
 };
 
 export type Model = {
-    id: string;
+    id: number;
     vendorId: string;
     name?: string;
     modelKey: string;
@@ -137,8 +137,7 @@ export async function fetchWorkspaceApiKeys(
     config?: ApiFetchConfig,
 ) {
     const response = await apiFetch<PageResponse<ApiKey>>(
-        `/workspaces/${workspaceId}/llm-api-keys?page=${page}&size=${size}${
-            vendorId ? `&vendorId=${vendorId}` : ""
+        `/workspaces/${workspaceId}/llm-api-keys?page=${page}&size=${size}${vendorId ? `&vendorId=${vendorId}` : ""
         }`,
         {},
         config,

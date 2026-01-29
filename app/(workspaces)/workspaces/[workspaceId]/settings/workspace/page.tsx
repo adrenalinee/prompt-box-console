@@ -25,6 +25,7 @@ import {
     fetchWorkspace,
     updateWorkspace,
 } from "@/lib/api/workspaces";
+import { fetchWorkspaceModels } from "@/lib/api/settings";
 import { showNotification } from "@mantine/notifications";
 
 export default function WorkspaceSettingsPage() {
@@ -44,10 +45,22 @@ export default function WorkspaceSettingsPage() {
         enabled: !!workspaceId,
     });
 
+    const { data: models = [] } = useQuery({
+        queryKey: ["workspace-models", workspaceId],
+        queryFn: () => fetchWorkspaceModels(workspaceId, undefined, 0, 100),
+        enabled: !!workspaceId,
+    });
+
+    const modelOptions = models.map((model) => ({
+        value: String(model.id),
+        label: model.name || model.modelKey,
+    }));
+
     const workspaceForm = useForm({
         initialValues: {
             name: "",
             description: "",
+            defaultModelId: "" as string | null,
         },
         validate: {
             name: (value) => (value.trim().length > 0 ? null : "이름을 입력해주세요"),
@@ -59,16 +72,20 @@ export default function WorkspaceSettingsPage() {
             workspaceForm.setValues({
                 name: workspaceData.name,
                 description: workspaceData.description || "",
+                defaultModelId: workspaceData.defaultModelId ? String(workspaceData.defaultModelId) : null,
             });
         }
     }, [workspaceData]);
 
     const workspaceMutation = useMutation({
-        mutationFn: (values: { name: string; description: string }) =>
-            updateWorkspace(workspaceId, values),
+        mutationFn: (values: { name: string; description: string; defaultModelId?: string | null }) =>
+            updateWorkspace(workspaceId, {
+                ...values,
+                defaultModelId: values.defaultModelId ? Number(values.defaultModelId) : null,
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["workspace", workspaceId] });
-            queryClient.invalidateQueries({ queryKey: ["workspaces"] }); // Update list in sidebar if needed
+            queryClient.invalidateQueries({ queryKey: ["workspaces"] });
             showNotification({
                 color: "teal",
                 title: "저장 완료",
@@ -112,7 +129,6 @@ export default function WorkspaceSettingsPage() {
 
     React.useEffect(() => {
         if (!defaultOptionsData) {
-            // Keep default/empty if no data yet or 404
             return;
         }
         defaultOptionsForm.setValues({
@@ -199,6 +215,14 @@ export default function WorkspaceSettingsPage() {
                                 autosize
                                 minRows={2}
                                 {...workspaceForm.getInputProps("description")}
+                            />
+                            <Select
+                                label="기본 모델"
+                                description="Playground에서 기본으로 선택될 모델입니다."
+                                data={modelOptions}
+                                clearable
+                                searchable
+                                {...workspaceForm.getInputProps("defaultModelId")}
                             />
                             <Group justify="flex-end">
                                 <Button
