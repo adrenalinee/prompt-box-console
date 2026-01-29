@@ -13,6 +13,7 @@ import {
     IconDatabase,
     IconBuildingStore,
     IconAdjustments,
+    IconBriefcase,
 } from "@tabler/icons-react";
 
 type AppShellNavProps = {
@@ -30,10 +31,10 @@ export function AppShellNav({ workspaceId }: AppShellNavProps) {
     ];
 
     const settingsItems = [
+        { href: `${base}/settings/workspace`, label: "Workspace", icon: IconBriefcase },
         { href: `${base}/settings/api-keys`, label: "API Keys", icon: IconKey },
         { href: `${base}/settings/vendors`, label: "Vendors", icon: IconBuildingStore },
         { href: `${base}/settings/models`, label: "Models", icon: IconDatabase },
-        { href: `${base}/settings/default-options`, label: "Default Options", icon: IconAdjustments },
     ];
 
     return (
