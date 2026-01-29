@@ -34,6 +34,66 @@ export function LogDetail({ log }: LogDetailProps) {
         }
     }
 
+    const renderItemBox = (item: any) => {
+        const entries = Object.entries(item);
+        // Sort entries to put id/position first, then others, then long text fields last
+        const sortedEntries = entries.sort(([keyA], [keyB]) => {
+            const priorityKeys = ["id", "position", "role"];
+            const textKeys = ["renderedMessage", "outputText", "message"];
+
+            const isAPriority = priorityKeys.includes(keyA);
+            const isBPriority = priorityKeys.includes(keyB);
+            if (isAPriority && !isBPriority) return -1;
+            if (!isAPriority && isBPriority) return 1;
+
+            const isAText = textKeys.includes(keyA);
+            const isBText = textKeys.includes(keyB);
+            if (isAText && !isBText) return 1;
+            if (!isAText && isBText) return -1;
+
+            return 0; // Keep original order for others
+        });
+
+        return (
+            <Paper key={item.id} p="sm" withBorder bg="gray.0">
+                <Stack gap="xs">
+                    {sortedEntries.map(([key, value]) => {
+                        const isLongText = ["renderedMessage", "outputText", "message", "instructions"].includes(key);
+                        if (isLongText) {
+                            return (
+                                <Stack key={key} gap={4}>
+                                    <Text fw={500} size="sm" style={{ textTransform: "capitalize" }}>
+                                        {key.replace(/([A-Z])/g, " $1")}:
+                                    </Text>
+                                    <Paper p="xs" withBorder bg="white">
+                                        <Text
+                                            style={{
+                                                whiteSpace: "pre-wrap",
+                                                wordBreak: "break-word",
+                                                fontFamily: "monospace",
+                                            }}
+                                            size="sm"
+                                        >
+                                            {String(value)}
+                                        </Text>
+                                    </Paper>
+                                </Stack>
+                            );
+                        }
+                        return (
+                            <Group key={key}>
+                                <Text fw={500} size="sm" w={100} style={{ textTransform: "capitalize" }}>
+                                    {key.replace(/([A-Z])/g, " $1")}:
+                                </Text>
+                                <Text size="sm">{String(value)}</Text>
+                            </Group>
+                        );
+                    })}
+                </Stack>
+            </Paper>
+        );
+    };
+
     return (
         <Stack>
             <Title order={3}>Log {callLog.id}</Title>
@@ -126,7 +186,10 @@ export function LogDetail({ log }: LogDetailProps) {
                         )}
                     </CopyButton>
                 </Group>
-                <CodeHighlight code={renderJson(log.inputItems)} language="json" />
+                <Stack>
+                    {log.inputItems?.map((item) => renderItemBox(item))}
+                    {!log.inputItems?.length && <Text c="dimmed">No input items.</Text>}
+                </Stack>
             </Paper>
 
             <Paper p="md" withBorder>
@@ -140,7 +203,10 @@ export function LogDetail({ log }: LogDetailProps) {
                         )}
                     </CopyButton>
                 </Group>
-                <CodeHighlight code={renderJson(log.outputItems)} language="json" />
+                <Stack>
+                    {log.outputItems?.map((item) => renderItemBox(item))}
+                    {!log.outputItems?.length && <Text c="dimmed">No output items.</Text>}
+                </Stack>
             </Paper>
         </Stack>
     );
