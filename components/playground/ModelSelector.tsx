@@ -142,6 +142,7 @@ export function ModelSelector({
                     variant="default"
                     leftSection={<IconServer size={16} />}
                     onClick={() => setModalOpen(true)}
+                    type="button"
                 >
                     {selectedModel ? `모델: ${selectedModel.name || selectedModel.modelKey}` : "모델 선택"}
                 </Button>
@@ -149,7 +150,7 @@ export function ModelSelector({
                     {selectedKeyLabel}
                 </Text>
             </Group>
-            <ActionIcon variant="light" onClick={onOptionsClick}>
+            <ActionIcon variant="light" onClick={onOptionsClick} type="button">
                 <IconAdjustments size={16} />
             </ActionIcon>
 
@@ -204,6 +205,7 @@ export function ModelSelector({
                                                         onModelChange(String(model.id));
                                                         setModalOpen(false);
                                                     }}
+                                                    type="button"
                                                 >
                                                     선택
                                                 </Button>

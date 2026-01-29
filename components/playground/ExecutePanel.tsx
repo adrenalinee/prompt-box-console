@@ -33,6 +33,7 @@ import {
 } from "@/lib/api/prompts";
 import { showNotification } from "@mantine/notifications";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/keys";
 import { ModelSelector } from "./ModelSelector";
 import { PromptSelector } from "./PromptSelector";
 
@@ -380,200 +381,204 @@ export function ExecutePanel({
 
 
     return (
-        <form
-            id="playground-execute-form"
-            onSubmit={form.onSubmit((values) => {
-                if (!values.modelId || !values.apiKeyId) {
-                    setMissingModelOpen(true);
-                    return;
-                }
-                const effectiveItems = values.inputItems.filter(
-                    (item) => item.message.trim().length > 0,
-                );
-                const hasAnyInput =
-                    values.instructions.trim().length > 0 || effectiveItems.length > 0;
-                if (!hasAnyInput) {
-                    setMissingInputOpen(true);
-                    return;
-                }
-                const options = {
-                    temperature: values.overrideOptions.temperature ?? undefined,
-                    topP: values.overrideOptions.topP ?? undefined,
-                    maxTokens: values.overrideOptions.maxTokens ?? undefined,
-                    textFormat: values.overrideOptions.textFormat || undefined,
-                    effort: values.overrideOptions.effort || undefined,
-                    verbosity: values.overrideOptions.verbosity || undefined,
-                    summary: values.overrideOptions.summary || undefined,
-                };
-                const hasOptions = Object.values(options).some((value) => value !== undefined);
-                const useRef =
-                    !!values.promptId &&
-                    !!values.refId &&
-                    values.instructions.trim() === refBaselineInstructions.trim();
+        <>
+            <form
+                id="playground-execute-form"
+                onSubmit={form.onSubmit((values) => {
+                    if (!values.modelId || !values.apiKeyId) {
+                        setMissingModelOpen(true);
+                        return;
+                    }
+                    const effectiveItems = values.inputItems.filter(
+                        (item) => item.message.trim().length > 0,
+                    );
+                    const hasAnyInput =
+                        values.instructions.trim().length > 0 || effectiveItems.length > 0;
+                    if (!hasAnyInput) {
+                        setMissingInputOpen(true);
+                        return;
+                    }
+                    const options = {
+                        temperature: values.overrideOptions.temperature ?? undefined,
+                        topP: values.overrideOptions.topP ?? undefined,
+                        maxTokens: values.overrideOptions.maxTokens ?? undefined,
+                        textFormat: values.overrideOptions.textFormat || undefined,
+                        effort: values.overrideOptions.effort || undefined,
+                        verbosity: values.overrideOptions.verbosity || undefined,
+                        summary: values.overrideOptions.summary || undefined,
+                    };
+                    const hasOptions = Object.values(options).some((value) => value !== undefined);
+                    const useRef =
+                        !!values.promptId &&
+                        !!values.refId &&
+                        values.instructions.trim() === refBaselineInstructions.trim();
 
-                onExecute({
-                    refId: useRef ? Number(values.refId) : undefined,
-                    instructions: useRef ? undefined : values.instructions || undefined,
-                    modelId: values.modelId,
-                    apiKeyId: values.apiKeyId,
-                    inputItems: effectiveItems,
-                    overrideOptions: hasOptions ? options : undefined,
-                });
-            })}
-        >
-            <Stack>
-                {/* 1. Model Selector */}
-                <ModelSelector
-                    models={models}
-                    modelsError={modelsError}
-                    selectedModelId={form.values.modelId}
-                    onModelChange={(id) => {
-                        form.setFieldValue("modelId", id);
-                        onModelChange?.(id);
-                    }}
-                    apiKeys={apiKeys}
-                    apiKeysError={apiKeysError}
-                    selectedApiKeyId={form.values.apiKeyId}
-                    onApiKeyChange={(id) => {
-                        form.setFieldValue("apiKeyId", id);
-                        onApiKeyChange?.(id);
-                    }}
-                    vendors={vendors}
-                    vendorsError={vendorsError}
-                    vendorId={vendorId}
-                    onVendorChange={onVendorChange}
-                    workspaceDefaultModelId={workspaceDefaultModelId}
-                    onOptionsClick={() => setOptionsModalOpen(true)}
-                />
+                    onExecute({
+                        refId: useRef ? Number(values.refId) : undefined,
+                        instructions: useRef ? undefined : values.instructions || undefined,
+                        modelId: values.modelId,
+                        apiKeyId: values.apiKeyId,
+                        inputItems: effectiveItems,
+                        overrideOptions: hasOptions ? options : undefined,
+                    });
+                })}
+            >
+                <Stack>
+                    {/* 1. Model Selector */}
+                    <ModelSelector
+                        models={models}
+                        modelsError={modelsError}
+                        selectedModelId={form.values.modelId}
+                        onModelChange={(id) => {
+                            form.setFieldValue("modelId", id);
+                            onModelChange?.(id);
+                        }}
+                        apiKeys={apiKeys}
+                        apiKeysError={apiKeysError}
+                        selectedApiKeyId={form.values.apiKeyId}
+                        onApiKeyChange={(id) => {
+                            form.setFieldValue("apiKeyId", id);
+                            onApiKeyChange?.(id);
+                        }}
+                        vendors={vendors}
+                        vendorsError={vendorsError}
+                        vendorId={vendorId}
+                        onVendorChange={onVendorChange}
+                        workspaceDefaultModelId={workspaceDefaultModelId}
+                        onOptionsClick={() => setOptionsModalOpen(true)}
+                    />
 
-                <Group justify="space-between" align="flex-start" style={{ flexWrap: "nowrap" }}>
-                    <Text size="xs" style={{ flex: 1, lineHeight: 1.4 }}>
-                        {optionSummary.map((item, index) => (
-                            <Text key={item.label} span>
-                                <Text span c="dimmed">
-                                    {item.label}
+                    <Group justify="space-between" align="flex-start" style={{ flexWrap: "nowrap" }}>
+                        <Text size="xs" style={{ flex: 1, lineHeight: 1.4 }}>
+                            {optionSummary.map((item, index) => (
+                                <Text key={item.label} span>
+                                    <Text span c="dimmed">
+                                        {item.label}
+                                    </Text>
+                                    <Text span c="dark">
+                                        {` ${item.value}`}
+                                    </Text>
+                                    {index < optionSummary.length - 1 ? " · " : ""}
                                 </Text>
-                                <Text span c="dark">
-                                    {` ${item.value}`}
-                                </Text>
-                                {index < optionSummary.length - 1 ? " · " : ""}
-                            </Text>
-                        ))}
-                    </Text>
-                </Group>
+                            ))}
+                        </Text>
+                    </Group>
 
-                {/* 2. Prompt Selector */}
-                <PromptSelector
-                    prompts={prompts}
-                    promptsError={promptsError}
-                    selectedPromptId={form.values.promptId}
-                    onPromptChange={handleSelectPrompt}
-                    refs={refs}
-                    refsError={refsError}
-                    selectedRefId={form.values.refId}
-                    onRefChange={(id) => {
-                        form.setFieldValue("refId", id);
-                        onRefChange?.(id);
-                    }}
-                    isModified={isModified}
-                    hasPromptContent={hasPromptContent}
-                    onCreatePrompt={() => {
-                        promptForm.reset();
-                        setCreatePromptOpen(true);
-                    }}
-                    onCreateTag={() => {
-                        refForm.reset();
-                        setCreateRefOpen({ type: "TAG" });
-                    }}
-                    onSaveChanges={async () => {
-                        try {
-                            if (!form.values.promptId || !form.values.refId) return;
-                            const refId = Number(form.values.refId);
-                            await updateRef(form.values.promptId, refId, {
-                                instructions: form.values.instructions,
-                            });
-                            await syncAdditionalInputs(form.values.promptId, refId);
-                            showNotification({
-                                color: "teal",
-                                title: "저장 완료",
-                                message: "수정내역이 저장되었습니다.",
-                            });
-                        } catch (error) {
-                            if (error && typeof error === "object" && "status" in error) {
-                                return;
-                            }
-                            showNotification({
-                                color: "red",
-                                title: "오류",
-                                message: "저장 중 문제가 발생했습니다.",
-                            });
-                        }
-                    }}
-                    onCreateBranch={() => {
-                        refForm.reset();
-                        setCreateRefOpen({ type: "BRANCH" });
-                    }}
-                    onRequestPromptChange={requestPromptChange}
-                />
-
-                <Textarea
-                    label="Instructions"
-                    minRows={6}
-                    autosize
-                    {...form.getInputProps("instructions")}
-                />
-
-                <Stack gap="xs">
-                    <Text fw={600}>Input Items</Text>
-                    {hasInvalidInputItems && (
-                        <Alert color="yellow" variant="light">
-                            message가 비어 있으면 안됩니다. 필요없는 input item이라면 삭제해주세요.
-                        </Alert>
-                    )}
-                    {form.values.inputItems.map((item, index) => (
-                        <Paper key={`input-${index}`} withBorder p="sm">
-                            <Group justify="space-between" align="center">
-                                <Select
-                                    label="Role"
-                                    data={[
-                                        { value: "USER", label: "USER" },
-                                        { value: "ASSISTANT", label: "ASSISTANT" },
-                                        { value: "SYSTEM", label: "SYSTEM" },
-                                        { value: "DEVELOPER", label: "DEVELOPER" },
-                                    ]}
-                                    w={160}
-                                    {...form.getInputProps(`inputItems.${index}.role`)}
-                                />
-                                <Menu shadow="md" position="bottom-end">
-                                    <Menu.Target>
-                                        <ActionIcon variant="light">
-                                            <IconDotsVertical size={16} />
-                                        </ActionIcon>
-                                    </Menu.Target>
-                                    <Menu.Dropdown>
-                                        <Menu.Item
-                                            color="red"
-                                            disabled={form.values.inputItems.length === 1}
-                                            onClick={() => form.removeListItem("inputItems", index)}
-                                        >
-                                            삭제
-                                        </Menu.Item>
-                                    </Menu.Dropdown>
-                                </Menu>
-                            </Group>
-                            <Textarea
-                                label="Message"
-                                minRows={3}
-                                autosize
-                                value={item.message}
-                                onChange={(event) =>
-                                    updateInputMessage(index, event.currentTarget.value)
+                    {/* 2. Prompt Selector */}
+                    <PromptSelector
+                        prompts={prompts}
+                        promptsError={promptsError}
+                        selectedPromptId={form.values.promptId}
+                        onPromptChange={handleSelectPrompt}
+                        refs={refs}
+                        refsError={refsError}
+                        selectedRefId={form.values.refId}
+                        onRefChange={(id) => {
+                            form.setFieldValue("refId", id);
+                            onRefChange?.(id);
+                        }}
+                        isModified={isModified}
+                        hasPromptContent={hasPromptContent}
+                        onCreatePrompt={() => {
+                            promptForm.reset();
+                            setCreatePromptOpen(true);
+                        }}
+                        onCreateTag={() => {
+                            refForm.reset();
+                            setCreateRefOpen({ type: "TAG" });
+                        }}
+                        onSaveChanges={async () => {
+                            try {
+                                if (!form.values.promptId || !form.values.refId) return;
+                                const refId = Number(form.values.refId);
+                                await updateRef(form.values.promptId, refId, {
+                                    instructions: form.values.instructions,
+                                });
+                                await syncAdditionalInputs(form.values.promptId, refId);
+                                showNotification({
+                                    color: "teal",
+                                    title: "저장 완료",
+                                    message: "수정내역이 저장되었습니다.",
+                                });
+                            } catch (error) {
+                                if (error && typeof error === "object" && "status" in error) {
+                                    return;
                                 }
-                            />
-                        </Paper>
-                    ))}
+                                showNotification({
+                                    color: "red",
+                                    title: "오류",
+                                    message: "저장 중 문제가 발생했습니다.",
+                                });
+                            }
+                        }}
+                        onCreateBranch={() => {
+                            refForm.reset();
+                            setCreateRefOpen({ type: "BRANCH" });
+                        }}
+                        onRequestPromptChange={requestPromptChange}
+                    />
+
+                    <Textarea
+                        label="Instructions"
+                        minRows={6}
+                        autosize
+                        {...form.getInputProps("instructions")}
+                    />
+
+                    <Stack gap="xs">
+                        <Text fw={600}>Input Items</Text>
+                        {hasInvalidInputItems && (
+                            <Alert color="yellow" variant="light">
+                                message가 비어 있으면 안됩니다. 필요없는 input item이라면 삭제해주세요.
+                            </Alert>
+                        )}
+                        {form.values.inputItems.map((item, index) => (
+                            <Paper key={`input-${index}`} withBorder p="sm">
+                                <Group justify="space-between" align="center">
+                                    <Select
+                                        label="Role"
+                                        data={[
+                                            { value: "USER", label: "USER" },
+                                            { value: "ASSISTANT", label: "ASSISTANT" },
+                                            { value: "SYSTEM", label: "SYSTEM" },
+                                            { value: "DEVELOPER", label: "DEVELOPER" },
+                                        ]}
+                                        w={160}
+                                        {...form.getInputProps(`inputItems.${index}.role`)}
+                                    />
+                                    <Menu shadow="md" position="bottom-end">
+                                        <Menu.Target>
+                                            <ActionIcon variant="light" type="button">
+                                                <IconDotsVertical size={16} />
+                                            </ActionIcon>
+                                        </Menu.Target>
+                                        <Menu.Dropdown>
+                                            <Menu.Item
+                                                color="red"
+                                                disabled={form.values.inputItems.length === 1}
+                                                onClick={() => form.removeListItem("inputItems", index)}
+                                                component="button"
+                                                type="button"
+                                            >
+                                                삭제
+                                            </Menu.Item>
+                                        </Menu.Dropdown>
+                                    </Menu>
+                                </Group>
+                                <Textarea
+                                    label="Message"
+                                    minRows={3}
+                                    autosize
+                                    value={item.message}
+                                    onChange={(event) =>
+                                        updateInputMessage(index, event.currentTarget.value)
+                                    }
+                                />
+                            </Paper>
+                        ))}
+                    </Stack>
                 </Stack>
-            </Stack>
+            </form>
 
             {/* Other Modals (Create Prompt, etc) remain here mostly unchanged as they are specific to ExecutePanel actions */}
             <Modal
@@ -693,6 +698,9 @@ export function ExecutePanel({
                                 title: "생성 완료",
                                 message: `${createRefOpen.type}가 생성되었습니다.`,
                             });
+                            queryClient.invalidateQueries({
+                                queryKey: queryKeys.refs(form.values.promptId),
+                            });
                             setCreateRefOpen(null);
                             onRefChange?.(String(result.id));
                             form.setFieldValue("refId", String(result.id)); // Force update local state
@@ -802,6 +810,6 @@ export function ExecutePanel({
                 </Stack>
             </Modal>
 
-        </form>
+        </>
     );
 }

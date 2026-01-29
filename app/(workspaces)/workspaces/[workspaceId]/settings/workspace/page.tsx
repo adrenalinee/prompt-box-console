@@ -148,9 +148,9 @@ export default function WorkspaceSettingsPage() {
             topP?: number;
             maxTokens?: number;
             textFormat?: string;
-            effort?: string;
-            verbosity?: string;
-            summary?: string;
+            effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
+            verbosity?: "LOW" | "MEDIUM" | "HIGH";
+            summary?: "AUTO" | "CONCISE" | "DETAILED";
         }) => upsertDefaultOptions(workspaceId, values),
         onSuccess: () => {
             queryClient.invalidateQueries({

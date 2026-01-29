@@ -75,6 +75,7 @@ export function PromptSelector({
                     variant="default"
                     leftSection={<IconFileText size={16} />}
                     onClick={() => setPromptModalOpen(true)}
+                    type="button"
                 >
                     {promptLabel}
                 </Button>
@@ -83,6 +84,7 @@ export function PromptSelector({
                     leftSection={<IconGitBranch size={16} />}
                     disabled={!selectedPromptId}
                     onClick={() => setRefModalOpen(true)}
+                    type="button"
                 >
                     {refLabel}
                 </Button>
@@ -91,7 +93,7 @@ export function PromptSelector({
                 {isModified && <Badge color="orange">수정됨</Badge>}
                 <Menu shadow="md" position="bottom-end" width={280}>
                     <Menu.Target>
-                        <ActionIcon variant="light">
+                        <ActionIcon variant="light" type="button">
                             <IconDotsVertical size={16} />
                         </ActionIcon>
                     </Menu.Target>
@@ -105,6 +107,8 @@ export function PromptSelector({
                                 <Menu.Item
                                     disabled={!hasPromptContent}
                                     onClick={onCreatePrompt}
+                                    component="button"
+                                    type="button"
                                 >
                                     <Text fw={500}>새 프롬프트 생성</Text>
                                     <Text size="xs" c="dimmed">
@@ -116,6 +120,8 @@ export function PromptSelector({
                         <Menu.Item
                             disabled={!canCreateTag}
                             onClick={onCreateTag}
+                            component="button"
+                            type="button"
                         >
                             <Text fw={500}>tag 생성</Text>
                             <Text size="xs" c="dimmed">
@@ -125,6 +131,8 @@ export function PromptSelector({
                         <Menu.Item
                             disabled={!canSaveChanges}
                             onClick={onSaveChanges}
+                            component="button"
+                            type="button"
                         >
                             <Text fw={500}>수정내역 저장</Text>
                             <Text size="xs" c="dimmed">
@@ -134,6 +142,8 @@ export function PromptSelector({
                         <Menu.Item
                             disabled={!canCreateBranch}
                             onClick={onCreateBranch}
+                            component="button"
+                            type="button"
                         >
                             <Text fw={500}>새 branch</Text>
                             <Text size="xs" c="dimmed">
@@ -189,6 +199,7 @@ export function PromptSelector({
                                                         onRequestPromptChange(prompt.id, prompt.name);
                                                         setPromptModalOpen(false);
                                                     }}
+                                                    type="button"
                                                 >
                                                     선택
                                                 </Button>
@@ -255,6 +266,7 @@ export function PromptSelector({
                                                         onRefChange(String(ref.id));
                                                         setRefModalOpen(false);
                                                     }}
+                                                    type="button"
                                                 >
                                                     선택
                                                 </Button>
