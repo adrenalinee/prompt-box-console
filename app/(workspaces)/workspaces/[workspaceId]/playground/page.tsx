@@ -11,7 +11,7 @@ import { executeCallStream, fetchLog, LlmStreamEvent } from "@/lib/api/llmCalls"
 import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel } from "@/components/playground/ExecutePanel";
 import { OutputPanel, type OutputBlock } from "@/components/playground/OutputPanel";
-import { fetchDefaultOptions } from "@/lib/api/workspaces";
+import { fetchDefaultOptions, fetchWorkspace } from "@/lib/api/workspaces";
 
 export default function PlaygroundPage() {
     const params = useParams();
@@ -23,6 +23,14 @@ export default function PlaygroundPage() {
     const initialRefId = searchParams.get("refId") ?? "";
     const initialModelId = searchParams.get("modelId") ?? "";
     const initialApiKeyId = searchParams.get("apiKeyId") ?? "";
+
+    const {
+        data: workspaceData,
+    } = useQuery({
+        queryKey: ["workspace", workspaceId],
+        queryFn: () => fetchWorkspace(workspaceId),
+        enabled: !!workspaceId,
+    });
 
     const { data: prompts = [], isLoading: promptsLoading, isError: promptsError, error: promptsErrorDetail } = useQuery({
         queryKey: workspaceId ? queryKeys.prompts(workspaceId) : [],
@@ -453,6 +461,7 @@ export default function PlaygroundPage() {
                         onVendorChange={setSelectedVendorId}
                         defaultOptions={defaultOptions ?? null}
                         additionalInputs={additionalInputs}
+                        workspaceDefaultModelId={workspaceData?.defaultModelId}
                         onExecute={(values) => executeMutation.mutate(values)}
                     />
                 </Grid.Col>
