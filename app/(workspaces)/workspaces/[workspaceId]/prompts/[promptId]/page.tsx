@@ -261,6 +261,13 @@ export default function PromptDetailPage() {
                 description: payload.description || undefined,
             }),
         onSuccess: (ref) => {
+            queryClient.setQueryData(queryKeys.refs(promptId), (old: PromptRef[] | undefined) => {
+                const list = old ? [...old] : [];
+                if (!list.find((r) => r.id === ref.id)) {
+                    list.push(ref);
+                }
+                return list;
+            });
             queryClient.invalidateQueries({ queryKey: queryKeys.refs(promptId) });
             setCreateRefState((prev) => ({ ...prev, opened: false }));
             createRefForm.reset();
@@ -385,6 +392,7 @@ export default function PromptDetailPage() {
                         </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
+                        {/*<Menu.Label>Named prompt 관리</Menu.Label>*/}
                         <Menu.Item onClick={() => setPromptEditOpen(true)}>수정</Menu.Item>
                         <Menu.Item color="red" onClick={() => setPromptDeleteOpen(true)}>
                             삭제
@@ -441,7 +449,7 @@ export default function PromptDetailPage() {
                                 </Button>
                             </div>
                         </Tooltip>
-                        <Tooltip label="Playground 에서 현재 branch 를 테스트합니다." withArrow>
+                        <Tooltip label="Playground 에서 현재 reference 를 테스트합니다." withArrow>
                             <div>
                                 <Button
                                     component={Link}
@@ -459,15 +467,22 @@ export default function PromptDetailPage() {
                                 </ActionIcon>
                             </Menu.Target>
                             <Menu.Dropdown>
+                                {/*<Menu.Label>Named prompt reference 관리</Menu.Label>*/}
+                                {isDefaultBranch && (
+                                    <Menu.Label>기본 브랜치는 삭제할 수 없습니다.</Menu.Label>
+                                )}
+                                {selectedRef && !selectedIsBranch && (
+                                    <Menu.Label>태그는 수정/삭제 할 수 없습니다.</Menu.Label>
+                                )}
                                 <Menu.Item
                                     onClick={() => setRefEditOpen(true)}
                                     disabled={!selectedRef || !selectedIsBranch}
                                 >
                                     수정
                                 </Menu.Item>
-                                {selectedRef && !selectedIsBranch && (
-                                    <Menu.Label>태그는 수정 할 수 없습니다.</Menu.Label>
-                                )}
+                                {/*{selectedRef && !selectedIsBranch && (*/}
+                                {/*    <Menu.Label>태그는 수정 할 수 없습니다.</Menu.Label>*/}
+                                {/*)}*/}
                                 <Menu.Item
                                     color="red"
                                     onClick={() => selectedRef && setDeleteTarget(selectedRef)}
@@ -475,12 +490,7 @@ export default function PromptDetailPage() {
                                 >
                                     삭제
                                 </Menu.Item>
-                                {isDefaultBranch && (
-                                    <Menu.Label>기본 브랜치는 삭제할 수 없습니다.</Menu.Label>
-                                )}
-                                {selectedRef && !selectedIsBranch && (
-                                    <Menu.Label>태그는 삭제 할 수 없습니다.</Menu.Label>
-                                )}
+
                             </Menu.Dropdown>
                         </Menu>
                     </Group>
@@ -625,7 +635,7 @@ export default function PromptDetailPage() {
                 </Stack>
             </Stack>
 
-            <Modal opened={refPickerOpen} onClose={() => setRefPickerOpen(false)} title="Ref 선택">
+            <Modal opened={refPickerOpen} onClose={() => setRefPickerOpen(false)} title="Reference 선택">
                 <Tabs defaultValue="BRANCH">
                     <Tabs.List>
                         <Tabs.Tab value="BRANCH">Branch</Tabs.Tab>
@@ -966,10 +976,10 @@ export default function PromptDetailPage() {
                                     row.status === "same"
                                         ? undefined
                                         : row.status === "added"
-                                          ? "var(--mantine-color-teal-light)"
-                                          : row.status === "removed"
-                                            ? "var(--mantine-color-red-light)"
-                                            : "var(--mantine-color-yellow-light)";
+                                            ? "var(--mantine-color-teal-light)"
+                                            : row.status === "removed"
+                                                ? "var(--mantine-color-red-light)"
+                                                : "var(--mantine-color-yellow-light)";
 
                                 const leftLineNo = row.left ? String(index + 1) : "";
                                 const rightLineNo = row.right ? String(index + 1) : "";
