@@ -387,12 +387,14 @@ export default function PromptDetailPage() {
                 </Stack>
                 <Menu position="bottom-end" shadow="md" width={180}>
                     <Menu.Target>
-                        <ActionIcon variant="subtle" aria-label="prompt menu">
-                            <IconDotsVertical size={16} />
-                        </ActionIcon>
+                        <Tooltip label="Named prompt action">
+                            <ActionIcon variant="subtle" aria-label="prompt menu">
+                                <IconDotsVertical size={16} />
+                            </ActionIcon>
+                        </Tooltip>
                     </Menu.Target>
                     <Menu.Dropdown>
-                        {/*<Menu.Label>Named prompt 관리</Menu.Label>*/}
+                        {/*<Menu.Label>Named prompt</Menu.Label>*/}
                         <Menu.Item onClick={() => setPromptEditOpen(true)}>수정</Menu.Item>
                         <Menu.Item color="red" onClick={() => setPromptDeleteOpen(true)}>
                             삭제
@@ -462,12 +464,14 @@ export default function PromptDetailPage() {
                         </Tooltip>
                         <Menu position="bottom-end" shadow="md" width={200}>
                             <Menu.Target>
-                                <ActionIcon variant="subtle" aria-label="ref menu">
-                                    <IconDotsVertical size={16} />
-                                </ActionIcon>
+                                <Tooltip label="Named prompt reference action">
+                                    <ActionIcon variant="subtle" aria-label="ref menu">
+                                        <IconDotsVertical size={16} />
+                                    </ActionIcon>
+                                </Tooltip>
                             </Menu.Target>
                             <Menu.Dropdown>
-                                {/*<Menu.Label>Named prompt reference 관리</Menu.Label>*/}
+                                {/*<Menu.Label>Named prompt reference</Menu.Label>*/}
                                 {isDefaultBranch && (
                                     <Menu.Label>기본 브랜치는 삭제할 수 없습니다.</Menu.Label>
                                 )}
@@ -480,9 +484,6 @@ export default function PromptDetailPage() {
                                 >
                                     수정
                                 </Menu.Item>
-                                {/*{selectedRef && !selectedIsBranch && (*/}
-                                {/*    <Menu.Label>태그는 수정 할 수 없습니다.</Menu.Label>*/}
-                                {/*)}*/}
                                 <Menu.Item
                                     color="red"
                                     onClick={() => selectedRef && setDeleteTarget(selectedRef)}
@@ -490,7 +491,6 @@ export default function PromptDetailPage() {
                                 >
                                     삭제
                                 </Menu.Item>
-
                             </Menu.Dropdown>
                         </Menu>
                     </Group>
