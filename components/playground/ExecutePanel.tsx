@@ -616,8 +616,7 @@ export function ExecutePanel({
                 <form
                     onSubmit={promptForm.onSubmit(async (values) => {
                         try {
-                            const result = await createPrompt({
-                                workspaceId,
+                            const result = await createPrompt(workspaceId, {
                                 name: values.name,
                                 description: values.description,
                                 instructions: form.values.instructions,
@@ -752,14 +751,51 @@ export function ExecutePanel({
                 opened={optionsModalOpen}
                 onClose={() => setOptionsModalOpen(false)}
                 title="Options 설정"
+                size="lg"
             >
                 <Stack>
-                    {/* ... Options form fields ... */}
-                    {/* To be brief, I'll rewrite the controls here for Options */}
-                    <TextInput label="Temperature" type="number" step={0.01} {...form.getInputProps("overrideOptions.temperature")} />
-                    <TextInput label="Top P" type="number" step={0.01} {...form.getInputProps("overrideOptions.topP")} />
-                    <TextInput label="Max Tokens" type="number" {...form.getInputProps("overrideOptions.maxTokens")} />
-                    {/* ... others ... */}
+                    <Group grow>
+                        <TextInput label="Temperature" type="number" step={0.01} {...form.getInputProps("overrideOptions.temperature")} />
+                        <TextInput label="Top P" type="number" step={0.01} {...form.getInputProps("overrideOptions.topP")} />
+                        <TextInput label="Max Tokens" type="number" {...form.getInputProps("overrideOptions.maxTokens")} />
+                    </Group>
+                    <Group grow>
+                        <TextInput label="textFormat" {...form.getInputProps("overrideOptions.textFormat")} />
+                        <Select
+                            label="effort"
+                            data={[
+                                { value: "DEFAULT", label: "DEFAULT" },
+                                { value: "LOW", label: "LOW" },
+                                { value: "MEDIUM", label: "MEDIUM" },
+                                { value: "HIGH", label: "HIGH" },
+                            ]}
+                            clearable
+                            value={form.values.overrideOptions.effort || null}
+                            onChange={(value) => form.setFieldValue("overrideOptions.effort", value ?? "")}
+                        />
+                        <Select
+                            label="verbosity"
+                            data={[
+                                { value: "LOW", label: "LOW" },
+                                { value: "MEDIUM", label: "MEDIUM" },
+                                { value: "HIGH", label: "HIGH" },
+                            ]}
+                            clearable
+                            value={form.values.overrideOptions.verbosity || null}
+                            onChange={(value) => form.setFieldValue("overrideOptions.verbosity", value ?? "")}
+                        />
+                    </Group>
+                    <Select
+                        label="summary"
+                        data={[
+                            { value: "AUTO", label: "AUTO" },
+                            { value: "CONCISE", label: "CONCISE" },
+                            { value: "DETAILED", label: "DETAILED" },
+                        ]}
+                        clearable
+                        value={form.values.overrideOptions.summary || null}
+                        onChange={(value) => form.setFieldValue("overrideOptions.summary", value ?? "")}
+                    />
                     <Group justify="flex-end">
                         <Button onClick={() => setOptionsModalOpen(false)}>닫기</Button>
                     </Group>
