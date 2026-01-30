@@ -58,6 +58,37 @@ export function LogDetail({ log }: LogDetailProps) {
             <Paper key={item.id} p="sm" withBorder bg="gray.0">
                 <Stack gap="xs">
                     {sortedEntries.map(([key, value]) => {
+                        if (key === "parts" && Array.isArray(value)) {
+                            return (
+                                <Stack key={key} gap={4}>
+                                    <Text fw={500} size="sm" style={{ textTransform: "capitalize" }}>
+                                        Parts:
+                                    </Text>
+                                    <Stack gap="xs">
+                                        {value.map((part: any, index: number) => (
+                                            <Paper key={index} p="xs" withBorder bg="white">
+                                                <Group justify="space-between" mb={4}>
+                                                    <Text size="xs" fw={700} c="dimmed">
+                                                        {part.part}
+                                                    </Text>
+                                                </Group>
+                                                <Text
+                                                    style={{
+                                                        whiteSpace: "pre-wrap",
+                                                        wordBreak: "break-word",
+                                                        fontFamily: "monospace",
+                                                    }}
+                                                    size="sm"
+                                                >
+                                                    {part.text}
+                                                </Text>
+                                            </Paper>
+                                        ))}
+                                    </Stack>
+                                </Stack>
+                            );
+                        }
+
                         const isLongText = ["renderedMessage", "outputText", "message", "instructions"].includes(key);
                         if (isLongText) {
                             return (

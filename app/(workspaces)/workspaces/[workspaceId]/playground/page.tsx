@@ -144,11 +144,15 @@ export default function PlaygroundPage() {
         indexToItem: Map<
             number,
             {
-                text: string;
                 kind: "message" | "reasoning";
-                part?: string;
-                firstDeltaAt?: number;
-                doneAt?: number;
+                parts: Map<
+                    string,
+                    {
+                        text: string;
+                        firstDeltaAt?: number;
+                        doneAt?: number;
+                    }
+                >;
             }
         >;
         nextIndex: number;
@@ -171,46 +175,66 @@ export default function PlaygroundPage() {
         setOutputError("");
     }, []);
 
-    const ensureIndexForId = React.useCallback((id?: string, index?: number) => {
-        const state = outputItemsRef.current;
-        if (!id) {
-            if (typeof index === "number") {
-                if (!state.indexToItem.has(index)) {
-                    state.indexToItem.set(index, { text: "", kind: "message" });
+    const ensureIndexForId = React.useCallback(
+        (id?: string, index?: number, kind: "message" | "reasoning" = "message") => {
+            const state = outputItemsRef.current;
+            if (!id) {
+                if (typeof index === "number") {
+                    if (!state.indexToItem.has(index)) {
+                        state.indexToItem.set(index, { kind, parts: new Map() });
+                    }
                 }
+                return index ?? null;
             }
-            return index ?? null;
-        }
-        if (state.idToIndex.has(id)) {
-            return state.idToIndex.get(id) ?? null;
-        }
-        const resolvedIndex = typeof index === "number" ? index : state.nextIndex;
-        state.idToIndex.set(id, resolvedIndex);
-        if (!state.indexToItem.has(resolvedIndex)) {
-            state.indexToItem.set(resolvedIndex, { text: "", kind: "message" });
-        }
-        state.nextIndex = Math.max(state.nextIndex, resolvedIndex + 1);
-        return resolvedIndex;
-    }, []);
+            if (state.idToIndex.has(id)) {
+                return state.idToIndex.get(id) ?? null;
+            }
+            const resolvedIndex = typeof index === "number" ? index : state.nextIndex;
+            state.idToIndex.set(id, resolvedIndex);
+            if (!state.indexToItem.has(resolvedIndex)) {
+                state.indexToItem.set(resolvedIndex, { kind, parts: new Map() });
+            }
+            state.nextIndex = Math.max(state.nextIndex, resolvedIndex + 1);
+            return resolvedIndex;
+        },
+        [],
+    );
 
     const rebuildOutputBlocks = React.useCallback(() => {
         const entries = Array.from(outputItemsRef.current.indexToItem.entries()).sort(
             ([a], [b]) => a - b,
         );
-        const blocks: OutputBlock[] = entries.map(([index, item]) => ({
-            index,
-            text: item.text,
-            kind: item.kind,
-            part: item.part,
-            firstDeltaMs:
-                item.firstDeltaAt && requestStartedAtRef.current
-                    ? item.firstDeltaAt - requestStartedAtRef.current
-                    : undefined,
-            doneMs:
-                item.doneAt && requestStartedAtRef.current
-                    ? item.doneAt - requestStartedAtRef.current
-                    : undefined,
-        }));
+        const blocks: OutputBlock[] = entries.map(([index, item]) => {
+            const parts = Array.from(item.parts.entries()).map(([partKey, partData]) => ({
+                part: partKey,
+                text: partData.text,
+                firstDeltaMs:
+                    partData.firstDeltaAt && requestStartedAtRef.current
+                        ? partData.firstDeltaAt - requestStartedAtRef.current
+                        : undefined,
+                doneMs:
+                    partData.doneAt && requestStartedAtRef.current
+                        ? partData.doneAt - requestStartedAtRef.current
+                        : undefined,
+            }));
+            // Sort parts if needed? Maybe SUMMARY before TEXT? Or order of insertion?
+            // Usually we want Summary then Detail? Or Detail then Summary?
+            // Let's sort: SUMMARY first? Or just alphabetical?
+            // "TEXT" vs "SUMMARY".
+            // Let's put "SUMMARY" first if it exists, then "TEXT".
+            parts.sort((a, b) => {
+                const priority = { SUMMARY: 1, TEXT: 2 };
+                const pA = priority[a.part as keyof typeof priority] || 99;
+                const pB = priority[b.part as keyof typeof priority] || 99;
+                return pA - pB;
+            });
+
+            return {
+                index,
+                kind: item.kind,
+                parts,
+            };
+        });
         setOutputBlocks(blocks);
     }, []);
 
@@ -224,43 +248,7 @@ export default function PlaygroundPage() {
         return "요청 중 문제가 발생했습니다.";
     }, []);
 
-    React.useEffect(() => {
-        const params = new URLSearchParams(searchParams.toString());
-        if (selectedPromptId) {
-            params.set("promptId", selectedPromptId);
-        } else {
-            params.delete("promptId");
-            params.delete("refId");
-        }
-        if (selectedRefId) {
-            params.set("refId", selectedRefId);
-        } else {
-            params.delete("refId");
-        }
-        if (selectedModelId) {
-            params.set("modelId", selectedModelId);
-        } else {
-            params.delete("modelId");
-        }
-        if (selectedApiKeyId) {
-            params.set("apiKeyId", selectedApiKeyId);
-        } else {
-            params.delete("apiKeyId");
-        }
-        const query = params.toString();
-        const currentQuery = searchParams.toString();
-        if (query !== currentQuery) {
-            router.replace(query ? `${pathname}?${query}` : pathname);
-        }
-    }, [
-        selectedPromptId,
-        selectedRefId,
-        selectedModelId,
-        selectedApiKeyId,
-        pathname,
-        router,
-        searchParams,
-    ]);
+    // ... useEffect ...
 
     const executeMutation = useMutation({
         mutationFn: async (payload: {
@@ -303,53 +291,65 @@ export default function PlaygroundPage() {
                         }
                         const isReasoning = event.type.startsWith("reasoning.");
                         const kind: "message" | "reasoning" = isReasoning ? "reasoning" : "message";
+
+                        // Default part to "TEXT" unless specified (SUMMARY etc)
+                        const partName = event.part || "TEXT";
+
                         if (event.type === "message.added" || event.type === "reasoning.added") {
-                            const index = ensureIndexForId(event.id, event.index);
+                            const index = ensureIndexForId(event.id, event.index, kind);
                             if (typeof index === "number") {
-                                const current = outputItemsRef.current.indexToItem.get(index);
-                                outputItemsRef.current.indexToItem.set(index, {
-                                    text: current?.text ?? "",
-                                    kind,
-                                    part: isReasoning ? event.part : undefined,
-                                    firstDeltaAt: current?.firstDeltaAt,
-                                    doneAt: current?.doneAt,
-                                });
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    item.kind = kind; // update kind if needed
+                                    if (!item.parts.has(partName)) {
+                                        item.parts.set(partName, { text: "" });
+                                    }
+                                }
                                 rebuildOutputBlocks();
                             }
                             return;
                         }
                         if (event.type === "message.delta" || event.type === "reasoning.delta") {
-                            const index = ensureIndexForId(event.id, event.index);
+                            const index = ensureIndexForId(event.id, event.index, kind);
                             if (typeof index === "number" && typeof event.delta === "string") {
-                                const current = outputItemsRef.current.indexToItem.get(index);
-                                const now = Date.now();
-                                outputItemsRef.current.indexToItem.set(index, {
-                                    text: `${current?.text ?? ""}${event.delta}`,
-                                    kind,
-                                    part: isReasoning ? event.part ?? current?.part : undefined,
-                                    firstDeltaAt: current?.firstDeltaAt ?? now,
-                                    doneAt: current?.doneAt,
-                                });
-                                rebuildOutputBlocks();
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    // Ensure kind is updated if it was defaulted to message
+                                    if (kind === "reasoning") {
+                                        item.kind = "reasoning";
+                                    }
+                                    const part = item.parts.get(partName) || { text: "" };
+                                    const now = Date.now();
+                                    part.text += event.delta;
+                                    part.firstDeltaAt = part.firstDeltaAt ?? now;
+                                    item.parts.set(partName, part);
+                                    rebuildOutputBlocks();
+                                }
                             }
                             return;
                         }
                         if (event.type === "message.done" || event.type === "reasoning.done") {
-                            const index = ensureIndexForId(event.id, event.index);
+                            const index = ensureIndexForId(event.id, event.index, kind);
                             if (typeof index === "number") {
-                                const current = outputItemsRef.current.indexToItem.get(index);
-                                const nextText = event.outputText ?? current?.text ?? "";
-                                const now = Date.now();
-                                outputItemsRef.current.indexToItem.set(index, {
-                                    text: nextText,
-                                    kind,
-                                    part: isReasoning ? event.part ?? current?.part : undefined,
-                                    firstDeltaAt: current?.firstDeltaAt ?? now,
-                                    doneAt: now,
-                                });
-                                rebuildOutputBlocks();
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    if (kind === "reasoning") {
+                                        item.kind = "reasoning";
+                                    }
+                                    const part = item.parts.get(partName) || { text: "" };
+                                    const now = Date.now();
+                                    // Only overwrite text if outputText is provided and not empty (or at least handle it carefully)
+                                    // If streaming accumulated text, we don't want to wipe it with empty string.
+                                    if (event.outputText) {
+                                        part.text = event.outputText;
+                                    }
+                                    part.firstDeltaAt = part.firstDeltaAt ?? now;
+                                    part.doneAt = now;
+                                    item.parts.set(partName, part);
+                                    rebuildOutputBlocks();
+                                }
                             }
-                        }
+                        } return;
                     },
                     onError: (error) => {
                         setOutputError(resolveErrorMessage(error));
@@ -358,32 +358,42 @@ export default function PlaygroundPage() {
                         const id = callIdRef.current;
                         if (!id) return;
                         try {
+                            // If we have any items, we skip fetching logs to avoid overwriting rich stream data
+                            if (outputItemsRef.current.indexToItem.size > 0) {
+                                return;
+                            }
+
                             const detail = await fetchLog(id);
+
                             const items = (detail.outputItems ?? [])
                                 .slice()
                                 .sort((a, b) => a.position - b.position);
                             if (!items.length) return;
-                            const messageIndexes = Array.from(
-                                outputItemsRef.current.indexToItem.entries(),
-                            )
-                                .filter(([, value]) => value.kind === "message")
-                                .map(([index]) => index)
-                                .sort((a, b) => a - b);
-                            const maxIndex =
-                                messageIndexes.length > 0
-                                    ? Math.max(...messageIndexes)
-                                    : outputItemsRef.current.nextIndex - 1;
+
                             items.forEach((item, itemIndex) => {
-                                const index =
-                                    messageIndexes[itemIndex] ??
-                                    maxIndex + 1 + (itemIndex - messageIndexes.length);
-                                const current = outputItemsRef.current.indexToItem.get(index);
+                                const index = itemIndex; // Simple mapping for fallback
+                                const map = new Map();
+                                let kind: "message" | "reasoning" = "message";
+
+                                if (item.parts && item.parts.length > 0) {
+                                    item.parts.forEach((p) => {
+                                        map.set(p.part, { text: p.text, doneAt: Date.now() });
+                                        if (p.part === "SUMMARY") {
+                                            kind = "reasoning";
+                                        }
+                                    });
+                                    // If we have parts but no SUMMARY, and maybe multiple text parts?
+                                    // Let's assume if it has parts it might be complex. 
+                                    // But checking for SUMMARY is a good heuristic for reasoning.
+                                    // Also check if any part suggests reasoning? 
+                                    // For now relying on SUMMARY part presence for reasoning kind seems consistent with previous logic.
+                                } else {
+                                    map.set("TEXT", { text: item.outputText, doneAt: Date.now() });
+                                }
+
                                 outputItemsRef.current.indexToItem.set(index, {
-                                    text: item.outputText,
-                                    kind: "message",
-                                    part: current?.part,
-                                    firstDeltaAt: current?.firstDeltaAt,
-                                    doneAt: current?.doneAt ?? Date.now(),
+                                    kind,
+                                    parts: map,
                                 });
                             });
                             rebuildOutputBlocks();

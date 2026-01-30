@@ -158,7 +158,7 @@ export function ModelSelector({
                 opened={modalOpen}
                 onClose={() => setModalOpen(false)}
                 title="모델 선택"
-                size="lg"
+                size="xl"
             >
                 <Stack>
                     {modelsError && (
@@ -179,6 +179,7 @@ export function ModelSelector({
                                     <Table.Th>Name</Table.Th>
                                     <Table.Th>Vendor</Table.Th>
                                     <Table.Th>Key</Table.Th>
+                                    <Table.Th>Type</Table.Th>
                                     <Table.Th ta="right">Action</Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
@@ -191,6 +192,9 @@ export function ModelSelector({
                                             <Text size="xs" c="dimmed">
                                                 {model.modelKey}
                                             </Text>
+                                        </Table.Td>
+                                        <Table.Td>
+                                            {model.modelType}
                                         </Table.Td>
                                         <Table.Td ta="right">
                                             <Group gap="xs" justify="flex-end">

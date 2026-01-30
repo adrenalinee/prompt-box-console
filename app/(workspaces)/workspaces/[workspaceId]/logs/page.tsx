@@ -98,6 +98,7 @@ export default function LogsPage() {
                     data={[
                         { value: "SUCCESS", label: "SUCCESS" },
                         { value: "ERROR", label: "ERROR" },
+                        { value: "RUNNING", label: "RUNNING" },
                         { value: "TIMEOUT", label: "TIMEOUT" },
                         { value: "CANCELLED", label: "CANCELLED" },
                     ]}

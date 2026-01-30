@@ -14,14 +14,19 @@ import {
     Text,
     Title,
 } from "@mantine/core";
+import {IconExternalLink} from "@tabler/icons-react";
+
+export type OutputContentPart = {
+    part: string;
+    text: string;
+    firstDeltaMs?: number;
+    doneMs?: number;
+};
 
 export type OutputBlock = {
     index: number;
-    text: string;
     kind: "message" | "reasoning";
-    part?: string;
-    firstDeltaMs?: number;
-    doneMs?: number;
+    parts: OutputContentPart[];
 };
 
 type OutputPanelProps = {
@@ -45,16 +50,44 @@ export function OutputPanel({
     errorMessage,
     isStreaming,
 }: OutputPanelProps) {
-    const hasOutput = blocks.some((block) => block.text.trim().length > 0);
+    const hasOutput = blocks.some((block) => block.parts.some((p) => p.text.trim().length > 0));
+
+    // Collect all part keys to default expanded? Or just rely on user interaction.
+    // Let's expand everything by default for now, or at least the latest?
+    // User probably wants to see text as it streams.
+    // For now, let's pick a strategy: "message" parts expanded by default. "reasoning" parts... maybe collapsed?
+    // The previous code defaulted reasoning to expanded (value={value} and defaultValue={value}).
+
+    // Let's just create unique IDs for all parts and pass them to defaultValue if we want them open.
+    // But since blocks change dynamically, controlled accordion might be tricky or jerky.
+    // Uncontrolled with defaultValue is safer for streaming updates if keys are stable.
+
     return (
         <Paper p="md" withBorder>
             <Stack>
                 <Group gap="xs" align="baseline">
                     <Title order={4}>Output</Title>
                     {callId && (
-                        <Anchor size="sm" c="dimmed" component={Link} href={`/workspaces/${workspaceId}/logs/${callId}`}>
-                            {callId}
-                        </Anchor>
+                        <Button
+                            size="sm"
+                            rightSection={<IconExternalLink />}
+                            component={Link}
+                            target="_blank"
+                            href={`/workspaces/${workspaceId}/logs/${callId}`}
+                            variant="light"
+                        >
+                            Logs 상세 보기
+                        </Button>
+
+                        // <Anchor
+                        //     size="sm"
+                        //     c="dimmed"
+                        //     component={Link}
+                        //     target="_blank"
+                        //     href={`/workspaces/${workspaceId}/logs/${callId}`}
+                        // >
+                        //     {callId}
+                        // </Anchor>
                     )}
                 </Group>
                 {errorMessage && (
@@ -74,73 +107,79 @@ export function OutputPanel({
                 {hasOutput && (
                     <Stack gap="sm">
                         {blocks.map((block) => {
-                            if (!block.text.trim()) return null;
-                            const timingText = `first delta ${formatMs(block.firstDeltaMs)} · done ${formatMs(
-                                block.doneMs,
-                            )}`;
-                            if (block.kind === "reasoning") {
-                                const label =
-                                    block.part === "SUMMARY"
-                                        ? "Reasoning (summary)"
-                                        : "Reasoning";
-                                const value = `reasoning-${block.index}`;
-                                return (
-                                    <Accordion
-                                        key={`out-${block.index}`}
-                                        variant="separated"
-                                        defaultValue={value}
-                                    >
-                                        <Accordion.Item value={value}>
-                                            <Accordion.Control>
-                                                <Group justify="space-between" w="100%">
-                                                    <Text size="sm" c="dimmed">
-                                                        {label}
-                                                    </Text>
-                                                    <Text size="xs" c="dimmed">
-                                                        {timingText}
-                                                    </Text>
-                                                </Group>
-                                            </Accordion.Control>
-                                            <Accordion.Panel>
-                                                <Text
-                                                    component="pre"
-                                                    c="dimmed"
-                                                    style={{ whiteSpace: "pre-wrap" }}
-                                                >
-                                                    {block.text}
-                                                </Text>
-                                            </Accordion.Panel>
-                                        </Accordion.Item>
-                                    </Accordion>
-                                );
-                            }
+                            // Filter valid parts
+                            const validParts = block.parts.filter((p) => p.text.trim().length > 0);
+                            if (validParts.length === 0) return null;
+
                             return (
-                                <Paper key={`out-${block.index}`} withBorder p="sm">
-                                    <Group justify="space-between" mb={6}>
-                                        <Text size="sm" c="dimmed">
-                                            Message
-                                        </Text>
-                                        <Text size="xs" c="dimmed">
-                                            {timingText}
-                                        </Text>
-                                    </Group>
-                                    <Text component="pre" style={{ whiteSpace: "pre-wrap" }}>
-                                        {block.text}
-                                    </Text>
+                                <Paper key={`block-${block.index}`} withBorder p={4} bg="gray.0">
+                                    <Accordion
+                                        variant="separated"
+                                        radius="md"
+                                        multiple
+                                        defaultValue={validParts.map(
+                                            (p) => `${block.index}-${p.part}`,
+                                        )}
+                                    >
+                                        {validParts.map((part) => {
+                                            const partKey = `${block.index}-${part.part}`;
+                                            const timingText = `first delta ${formatMs(
+                                                part.firstDeltaMs,
+                                            )} · done ${formatMs(part.doneMs)}`;
+                                            let label = "Message";
+                                            if (block.kind === "reasoning") {
+                                                label =
+                                                    part.part === "SUMMARY"
+                                                        ? "Reasoning Summary"
+                                                        : "Reasoning Process";
+                                            } else {
+                                                // Identify message parts if any specific naming exists
+                                                label = "Message";
+                                            }
+
+                                            return (
+                                                <Accordion.Item key={partKey} value={partKey}>
+                                                    <Accordion.Control>
+                                                        <Group justify="space-between" w="100%">
+                                                            <Text size="sm" fw={500}>
+                                                                {label}
+                                                            </Text>
+                                                            <Text size="xs" c="dimmed">
+                                                                {timingText}
+                                                            </Text>
+                                                        </Group>
+                                                    </Accordion.Control>
+                                                    <Accordion.Panel>
+                                                        <Text
+                                                            component="pre"
+                                                            c={
+                                                                block.kind === "reasoning"
+                                                                    ? "dimmed"
+                                                                    : undefined
+                                                            }
+                                                            style={{ whiteSpace: "pre-wrap" }}
+                                                        >
+                                                            {part.text}
+                                                        </Text>
+                                                    </Accordion.Panel>
+                                                </Accordion.Item>
+                                            );
+                                        })}
+                                    </Accordion>
                                 </Paper>
                             );
                         })}
                     </Stack>
                 )}
-                {callId && (
-                    <Button
-                        component={Link}
-                        href={`/workspaces/${workspaceId}/logs/${callId}`}
-                        variant="light"
-                    >
-                        Logs 상세 보기
-                    </Button>
-                )}
+                {/*{callId && (*/}
+                {/*    <Button*/}
+                {/*        component={Link}*/}
+                {/*        href={`/workspaces/${workspaceId}/logs/${callId}`}*/}
+                {/*        variant="light"*/}
+                {/*    >*/}
+                {/*        Logs 상세 보기*/}
+                {/*    </Button>*/}
+                {/*)}*/}
             </Stack>
         </Paper>
     );

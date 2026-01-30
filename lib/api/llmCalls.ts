@@ -28,14 +28,14 @@ export type ExecuteResult = {
 
 export type LlmStreamEvent = {
     type:
-        | "log.created"
-        | "message.added"
-        | "message.delta"
-        | "message.done"
-        | "reasoning.added"
-        | "reasoning.delta"
-        | "reasoning.done"
-        | string;
+    | "log.created"
+    | "message.added"
+    | "message.delta"
+    | "message.done"
+    | "reasoning.added"
+    | "reasoning.delta"
+    | "reasoning.done"
+    | string;
     id?: string;
     createdAt?: string;
     index?: number;
@@ -72,7 +72,15 @@ export type CallLog = {
 export type CallLogDetail = {
     callLog: CallLog;
     inputItems?: { id: number; position: number; renderedMessage: string }[];
-    outputItems?: { id: number; position: number; outputText: string }[];
+    outputItems?: {
+        id: number;
+        position: number;
+        outputText: string;
+        parts?: {
+            part: string;
+            text: string;
+        }[];
+    }[];
 };
 
 export async function executeCall(payload: ExecutePayload) {
