@@ -14,7 +14,7 @@ import {
     Text,
     Title,
 } from "@mantine/core";
-import {IconExternalLink} from "@tabler/icons-react";
+import { IconExternalLink } from "@tabler/icons-react";
 
 export type OutputContentPart = {
     part: string;
@@ -105,51 +105,54 @@ export function OutputPanel({
                     </Group>
                 )}
                 {hasOutput && (
-                    <Stack gap="sm">
+                    <Accordion
+                        variant="separated"
+                        radius="md"
+                        multiple
+                        defaultValue={blocks.map((b) => String(b.index))}
+                    >
                         {blocks.map((block) => {
                             // Filter valid parts
                             const validParts = block.parts.filter((p) => p.text.trim().length > 0);
                             if (validParts.length === 0) return null;
 
                             return (
-                                <Paper key={`block-${block.index}`} withBorder p={4} bg="gray.0">
-                                    <Accordion
-                                        variant="separated"
-                                        radius="md"
-                                        multiple
-                                        defaultValue={validParts.map(
-                                            (p) => `${block.index}-${p.part}`,
-                                        )}
-                                    >
-                                        {validParts.map((part) => {
-                                            const partKey = `${block.index}-${part.part}`;
-                                            const timingText = `first delta ${formatMs(
-                                                part.firstDeltaMs,
-                                            )} · done ${formatMs(part.doneMs)}`;
-                                            let label: string;
-                                            if (block.kind === "reasoning") {
-                                                label =
-                                                    part.part === "SUMMARY"
+                                <Accordion.Item key={block.index} value={String(block.index)}>
+                                    <Accordion.Control>
+                                        <Group justify="space-between" pr="sm">
+                                            <Text fw={600} style={{ textTransform: "capitalize" }}>
+                                                {block.kind}
+                                            </Text>
+                                            {/* Maybe show total duration if we calculate it? */}
+                                        </Group>
+                                    </Accordion.Control>
+                                    <Accordion.Panel>
+                                        <Stack gap="sm">
+                                            {validParts.map((part) => {
+                                                const partKey = `${block.index}-${part.part}`;
+                                                const timingText = `first delta ${formatMs(
+                                                    part.firstDeltaMs,
+                                                )} · done ${formatMs(part.doneMs)}`;
+
+                                                let label: string = part.part;
+                                                if (block.kind === "reasoning") {
+                                                    label = part.part.startsWith("summary-")
                                                         ? "Reasoning Summary"
                                                         : "Reasoning Process";
-                                            } else {
-                                                // Identify message parts if any specific naming exists
-                                                label = "Message";
-                                            }
+                                                } else {
+                                                    label = "Message Content";
+                                                }
 
-                                            return (
-                                                <Accordion.Item key={partKey} value={partKey}>
-                                                    <Accordion.Control>
-                                                        <Group justify="space-between" w="100%">
-                                                            <Text size="sm" fw={500}>
+                                                return (
+                                                    <Paper key={partKey} p="xs" withBorder bg="gray.0">
+                                                        <Group justify="space-between" mb={4}>
+                                                            <Text size="xs" fw={700} c="dimmed">
                                                                 {label}
                                                             </Text>
                                                             <Text size="xs" c="dimmed">
                                                                 {timingText}
                                                             </Text>
                                                         </Group>
-                                                    </Accordion.Control>
-                                                    <Accordion.Panel>
                                                         <Text
                                                             component="pre"
                                                             c={
@@ -157,19 +160,24 @@ export function OutputPanel({
                                                                     ? "dimmed"
                                                                     : undefined
                                                             }
-                                                            style={{ whiteSpace: "pre-wrap" }}
+                                                            style={{
+                                                                whiteSpace: "pre-wrap",
+                                                                wordBreak: "break-word",
+                                                                fontFamily: "monospace",
+                                                            }}
+                                                            size="sm"
                                                         >
                                                             {part.text}
                                                         </Text>
-                                                    </Accordion.Panel>
-                                                </Accordion.Item>
-                                            );
-                                        })}
-                                    </Accordion>
-                                </Paper>
+                                                    </Paper>
+                                                );
+                                            })}
+                                        </Stack>
+                                    </Accordion.Panel>
+                                </Accordion.Item>
                             );
                         })}
-                    </Stack>
+                    </Accordion>
                 )}
                 {/*{callId && (*/}
                 {/*    <Button*/}

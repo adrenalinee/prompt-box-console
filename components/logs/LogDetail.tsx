@@ -249,7 +249,7 @@ export function LogDetail({ log }: LogDetailProps) {
                 </Group>
                 <Stack>
                     {log.outputItems?.map((item) => {
-                        const { id, position, outputText, parts, ...rest } = item as any;
+                        const { id, position, itemType, parts, ...rest } = item;
                         return (
                             <Paper key={id} p="sm" withBorder bg="gray.0">
                                 <Stack gap="xs">
@@ -259,6 +259,9 @@ export function LogDetail({ log }: LogDetailProps) {
                                         </Text>
                                         <Text fw={500} size="sm">
                                             Position: {position}
+                                        </Text>
+                                        <Text fw={500} size="sm">
+                                            Type: {itemType}
                                         </Text>
                                     </Group>
 
@@ -274,38 +277,18 @@ export function LogDetail({ log }: LogDetailProps) {
                                         </Group>
                                     ))}
 
-                                    <Stack gap={4}>
-                                        <Text fw={500} size="sm">
-                                            Output Text:
-                                        </Text>
-                                        <Paper p="xs" withBorder bg="white">
-                                            <Spoiler maxHeight={100} showLabel="More" hideLabel="Hide">
-                                                <Text
-                                                    style={{
-                                                        whiteSpace: "pre-wrap",
-                                                        wordBreak: "break-word",
-                                                        fontFamily: "monospace",
-                                                    }}
-                                                    size="sm"
-                                                >
-                                                    {outputText}
-                                                </Text>
-                                            </Spoiler>
-                                        </Paper>
-                                    </Stack>
-
                                     {parts && parts.length > 0 && (
                                         <Stack gap={4}>
                                             <Text fw={500} size="sm">
                                                 Parts:
                                             </Text>
                                             <Stack gap="xs">
-                                                {parts.map((part: any, index: number) => {
-                                                    const { part: partName, text, ...partRest } = part;
+                                                {parts.map((part, index) => {
+                                                    const { partType, text, ...partRest } = part;
                                                     return (
                                                         <Paper key={index} p="xs" withBorder bg="white">
                                                             <Text size="xs" fw={700} c="dimmed" mb={4}>
-                                                                {partName}
+                                                                {partType}
                                                             </Text>
                                                             <Spoiler
                                                                 maxHeight={100}

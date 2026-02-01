@@ -26,26 +26,70 @@ export type ExecuteResult = {
     llmCallLogId: string;
 };
 
-export type LlmStreamEvent = {
-    type:
-    | "log.created"
-    | "message.added"
-    | "message.delta"
-    | "message.done"
-    | "reasoning.added"
-    | "reasoning.delta"
-    | "reasoning.done"
-    | string;
-    id?: string;
-    createdAt?: string;
-    index?: number;
-    delta?: string;
-    sequence?: number;
-    outputText?: string;
-    callLogId?: string;
-    contentIndex?: number;
-    part?: "TEXT" | "SUMMARY" | string;
-};
+export type LlmStreamEvent =
+    | { type: "log.created"; logId: string; createdAt: string }
+    | { type: "response.created"; id: string; sequence: number; model: string }
+    | { type: "response.message.added"; itemId: string; sequence: number; itemIndex: number }
+    | {
+        type: "response.message.content_part.added";
+        itemId: string;
+        sequence: number;
+        itemIndex: number;
+        partIndex: number;
+    }
+    | {
+        type: "response.message.content_part.done";
+        itemId: string;
+        sequence: number;
+        itemIndex: number;
+        partIndex: number;
+        text: string;
+    }
+    | {
+        type: "response.message.delta";
+        itemId: string;
+        sequence: number;
+        itemIndex: number;
+        partIndex: number;
+        delta: string;
+    }
+    | { type: "response.message.done"; itemId: string; sequence: number; itemIndex: number }
+    | { type: "response.reasoning.added"; itemId: string; sequence: number; itemIndex: number }
+    | {
+        type: "response.reasoning.summary_part.added";
+        itemId: string;
+        sequence: number;
+        itemIndex: number;
+        partIndex: number;
+    }
+    | {
+        type: "response.reasoning.summary_part.done";
+        itemId: string;
+        sequence: number;
+        itemIndex: number;
+        partIndex: number;
+        text: string;
+    }
+    | {
+        type: "response.reasoning.delta";
+        itemId: string;
+        sequence: number;
+        itemIndex: number;
+        partIndex: number;
+        delta: string;
+    }
+    | { type: "response.reasoning.done"; itemId: string; sequence: number; itemIndex: number }
+    | {
+        type: "response.completed";
+        id: string;
+        sequence: number;
+        inputTokens?: number;
+        cachedTokens?: number;
+        outputTokens?: number;
+        reasoningTokens?: number;
+        totalTokens?: number;
+    }
+    | { type: string;[key: string]: any };
 
 export type ExecuteStreamHandlers = {
     onEvent?: (event: LlmStreamEvent) => void;
@@ -69,18 +113,28 @@ export type CallLog = {
     instructions?: string;
 };
 
+export type OutputItemPart = {
+    id: number;
+    partType: "MESSAGE_CONTENT" | "REASONING_SUMMARY" | "UNKNOWN";
+    partIndex: number;
+    text: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type OutputItem = {
+    id: number;
+    position: number;
+    itemType: "MESSAGE" | "REASONING" | "UNKNOWN";
+    parts: OutputItemPart[];
+    createdAt: string;
+    updatedAt: string;
+};
+
 export type CallLogDetail = {
     callLog: CallLog;
     inputItems?: { id: number; position: number; renderedMessage: string }[];
-    outputItems?: {
-        id: number;
-        position: number;
-        outputText: string;
-        parts?: {
-            part: string;
-            text: string;
-        }[];
-    }[];
+    outputItems?: OutputItem[];
 };
 
 export async function executeCall(payload: ExecutePayload) {

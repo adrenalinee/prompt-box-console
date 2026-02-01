@@ -223,10 +223,28 @@ export default function PlaygroundPage() {
             // "TEXT" vs "SUMMARY".
             // Let's put "SUMMARY" first if it exists, then "TEXT".
             parts.sort((a, b) => {
-                const priority = { SUMMARY: 1, TEXT: 2 };
-                const pA = priority[a.part as keyof typeof priority] || 99;
-                const pB = priority[b.part as keyof typeof priority] || 99;
-                return pA - pB;
+                // Keys are like "summary-0", "part-0", etc.
+                // We want to group by type (summary vs part) and then by index.
+                // Or maybe just by index if we have multiple parts? 
+
+                // Let's assume 'part' keys are standard content and 'summary' keys are reasoning summary.
+                // If reasoning, usually summary comes first or last? 
+                // Let's assume alphabetical sort works for "part-0", "part-1".
+                // But "summary" vs "part"? "part" comes before "summary" alphabetically.
+                // If we want Reasoning Summary (e.g. "Thinking process") to appear before the final answer ("part-0"),
+                // then "summary" should sort before "part".
+
+                const getPriority = (key: string) => {
+                    if (key.startsWith("summary-")) return 1;
+                    if (key.startsWith("part-")) return 2;
+                    return 3;
+                };
+
+                const pA = getPriority(a.part);
+                const pB = getPriority(b.part);
+                if (pA !== pB) return pA - pB;
+
+                return a.part.localeCompare(b.part);
             });
 
             return {
@@ -280,76 +298,141 @@ export default function PlaygroundPage() {
                 },
                 {
                     onEvent: (event: LlmStreamEvent) => {
-                        if (event.type === "log.created" && event.id) {
-                            callIdRef.current = event.id;
-                            setCallId(event.id);
+                        if (event.type === "log.created") {
+                            callIdRef.current = event.logId;
+                            setCallId(event.logId);
                             return;
                         }
-                        if (event.callLogId) {
-                            callIdRef.current = event.callLogId;
-                            setCallId(event.callLogId);
+                        if (event.type === "response.created") {
+                            // maybe capture response id
                         }
-                        const isReasoning = event.type.startsWith("reasoning.");
-                        const kind: "message" | "reasoning" = isReasoning ? "reasoning" : "message";
 
-                        // Default part to "TEXT" unless specified (SUMMARY etc)
-                        const partName = event.part || "TEXT";
+                        if (event.type === "response.message.added") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "message");
+                            if (typeof index === "number") {
+                                rebuildOutputBlocks();
+                            }
+                        }
 
-                        if (event.type === "message.added" || event.type === "reasoning.added") {
-                            const index = ensureIndexForId(event.id, event.index, kind);
+                        if (event.type === "response.reasoning.added") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "reasoning");
+                            if (typeof index === "number") {
+                                rebuildOutputBlocks();
+                            }
+                        }
+
+                        if (event.type === "response.message.content_part.added") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "message");
                             if (typeof index === "number") {
                                 const item = outputItemsRef.current.indexToItem.get(index);
                                 if (item) {
-                                    item.kind = kind; // update kind if needed
-                                    if (!item.parts.has(partName)) {
-                                        item.parts.set(partName, { text: "" });
+                                    const partKey = `part-${event.partIndex}`;
+                                    if (!item.parts.has(partKey)) {
+                                        item.parts.set(partKey, { text: "" });
                                     }
                                 }
                                 rebuildOutputBlocks();
                             }
-                            return;
                         }
-                        if (event.type === "message.delta" || event.type === "reasoning.delta") {
-                            const index = ensureIndexForId(event.id, event.index, kind);
-                            if (typeof index === "number" && typeof event.delta === "string") {
-                                const item = outputItemsRef.current.indexToItem.get(index);
-                                if (item) {
-                                    // Ensure kind is updated if it was defaulted to message
-                                    if (kind === "reasoning") {
-                                        item.kind = "reasoning";
-                                    }
-                                    const part = item.parts.get(partName) || { text: "" };
-                                    const now = Date.now();
-                                    part.text += event.delta;
-                                    part.firstDeltaAt = part.firstDeltaAt ?? now;
-                                    item.parts.set(partName, part);
-                                    rebuildOutputBlocks();
-                                }
-                            }
-                            return;
-                        }
-                        if (event.type === "message.done" || event.type === "reasoning.done") {
-                            const index = ensureIndexForId(event.id, event.index, kind);
+
+                        if (event.type === "response.reasoning.summary_part.added") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "reasoning");
                             if (typeof index === "number") {
                                 const item = outputItemsRef.current.indexToItem.get(index);
                                 if (item) {
-                                    if (kind === "reasoning") {
-                                        item.kind = "reasoning";
+                                    // Special key for summary part
+                                    const partKey = `summary-${event.partIndex}`;
+                                    if (!item.parts.has(partKey)) {
+                                        item.parts.set(partKey, { text: "" });
                                     }
-                                    const part = item.parts.get(partName) || { text: "" };
+                                }
+                                rebuildOutputBlocks();
+                            }
+                        }
+
+                        if (event.type === "response.message.delta") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "message");
+                            if (typeof index === "number") {
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    const partKey = `part-${event.partIndex}`;
+                                    const part = item.parts.get(partKey) || { text: "" };
                                     const now = Date.now();
-                                    // Only overwrite text if outputText is provided and not empty (or at least handle it carefully)
-                                    // If streaming accumulated text, we don't want to wipe it with empty string.
-                                    if (event.outputText) {
-                                        part.text = event.outputText;
-                                    }
+                                    part.text += event.delta;
                                     part.firstDeltaAt = part.firstDeltaAt ?? now;
-                                    part.doneAt = now;
-                                    item.parts.set(partName, part);
+                                    item.parts.set(partKey, part);
                                     rebuildOutputBlocks();
                                 }
                             }
-                        } return;
+                        }
+
+                        if (event.type === "response.reasoning.delta") {
+                            // Assuming reasoning delta is for the content, but new API has reasoning parts? 
+                            // Wait, API doc says: "Emitted when a delta chunk is received for a reasoning item".
+                            // It has partIndex: "Index of the summary part within the reasoning summary"? 
+                            // Wait, `LlmReasoningDeltaEvent` says partIndex is for "Index of the summary part".
+                            // Let's check `LlmReasoningDeltaEvent` again.
+                            // `LlmReasoningDeltaEvent` -> partIndex: "Index of the summary part within the reasoning summary".
+                            // Wait, is there a main reasoning content?
+                            // New Structure: Reasoning has "summary parts". 
+                            // Is there non-summary reasoning? A: There is `LlmReasoningAddedEvent` but no "ReasoningContentPartAdded".
+                            // But there is `LlmReasoningDeltaEvent` which has `delta`.
+
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "reasoning");
+                            if (typeof index === "number") {
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    // The delta event has partIndex. So it must map to a summary part? 
+                                    // Or the reasoning itself IS the summary?
+                                    // Actually usually reasoning has a "thought process" and a "summary".
+                                    // Re-reading docs: 
+                                    // `LlmReasoningDeltaEvent` -> partIndex: "Index of the summary part".
+                                    // This implies reasoning is composed of summary parts? 
+                                    // What about the "thinking" stream?
+                                    // Ah, `LlmReasoningDeltaEvent` description says "Delta text chunk".
+
+                                    // Let's assume partIndex maps to the parts we initialized.
+                                    const partKey = `summary-${event.partIndex}`;
+                                    const part = item.parts.get(partKey) || { text: "" };
+                                    const now = Date.now();
+                                    part.text += event.delta;
+                                    part.firstDeltaAt = part.firstDeltaAt ?? now;
+                                    item.parts.set(partKey, part);
+                                    rebuildOutputBlocks();
+                                }
+                            }
+                        }
+
+                        if (event.type === "response.message.content_part.done") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "message");
+                            if (typeof index === "number") {
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    const partKey = `part-${event.partIndex}`;
+                                    const part = item.parts.get(partKey) || { text: "" };
+                                    part.text = event.text; // Ensure final text
+                                    part.doneAt = Date.now();
+                                    item.parts.set(partKey, part);
+                                    rebuildOutputBlocks();
+                                }
+                            }
+                        }
+
+                        if (event.type === "response.reasoning.summary_part.done") {
+                            const index = ensureIndexForId(event.itemId, event.itemIndex, "reasoning");
+                            if (typeof index === "number") {
+                                const item = outputItemsRef.current.indexToItem.get(index);
+                                if (item) {
+                                    const partKey = `summary-${event.partIndex}`;
+                                    const part = item.parts.get(partKey) || { text: "" };
+                                    part.text = event.text;
+                                    part.doneAt = Date.now();
+                                    item.parts.set(partKey, part);
+                                    rebuildOutputBlocks();
+                                }
+                            }
+                        }
+
                     },
                     onError: (error) => {
                         setOutputError(resolveErrorMessage(error));
@@ -373,26 +456,21 @@ export default function PlaygroundPage() {
                             items.forEach((item, itemIndex) => {
                                 const index = itemIndex; // Simple mapping for fallback
                                 const map = new Map();
-                                let kind: "message" | "reasoning" = "message";
+
+                                const category = item.itemType === "REASONING" ? "reasoning" : "message";
 
                                 if (item.parts && item.parts.length > 0) {
                                     item.parts.forEach((p) => {
-                                        map.set(p.part, { text: p.text, doneAt: Date.now() });
-                                        if (p.part === "SUMMARY") {
-                                            kind = "reasoning";
-                                        }
+                                        // For historical logs, we might not have 'partIndex'. 
+                                        // But `OutputItemPart` type has `partIndex`.
+                                        const prefix = category === "reasoning" ? "summary-" : "part-";
+                                        const key = `${prefix}${p.partIndex}`;
+                                        map.set(key, { text: p.text, doneAt: Date.now() });
                                     });
-                                    // If we have parts but no SUMMARY, and maybe multiple text parts?
-                                    // Let's assume if it has parts it might be complex. 
-                                    // But checking for SUMMARY is a good heuristic for reasoning.
-                                    // Also check if any part suggests reasoning? 
-                                    // For now relying on SUMMARY part presence for reasoning kind seems consistent with previous logic.
-                                } else {
-                                    map.set("TEXT", { text: item.outputText, doneAt: Date.now() });
                                 }
 
                                 outputItemsRef.current.indexToItem.set(index, {
-                                    kind,
+                                    kind: category,
                                     parts: map,
                                 });
                             });
