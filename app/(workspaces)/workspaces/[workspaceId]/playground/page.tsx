@@ -137,6 +137,7 @@ export default function PlaygroundPage() {
     const [outputBlocks, setOutputBlocks] = React.useState<OutputBlock[]>([]);
     const [callId, setCallId] = React.useState<string>("");
     const [outputError, setOutputError] = React.useState<string>("");
+    const [isCancelled, setIsCancelled] = React.useState<boolean>(false);
     const callIdRef = React.useRef<string>("");
     const requestStartedAtRef = React.useRef<number>(0);
     const outputItemsRef = React.useRef<{
@@ -173,6 +174,7 @@ export default function PlaygroundPage() {
         setCallId("");
         callIdRef.current = "";
         setOutputError("");
+        setIsCancelled(false);
     }, []);
 
     const ensureIndexForId = React.useCallback(
@@ -491,6 +493,9 @@ export default function PlaygroundPage() {
         mutationFn: async (callLogId: string) => {
             return cancelCall(callLogId, "User cancelled from Playground");
         },
+        onSuccess: () => {
+            setIsCancelled(true);
+        },
     });
 
     const handleStop = React.useCallback(() => {
@@ -583,6 +588,7 @@ export default function PlaygroundPage() {
                         workspaceId={workspaceId}
                         errorMessage={outputError}
                         isStreaming={executeMutation.isPending}
+                        isCancelled={isCancelled}
                     />
                 </Grid.Col>
             </Grid>

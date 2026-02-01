@@ -35,6 +35,7 @@ type OutputPanelProps = {
     workspaceId: string;
     errorMessage?: string;
     isStreaming?: boolean;
+    isCancelled?: boolean;
 };
 
 function formatMs(ms?: number) {
@@ -49,6 +50,7 @@ export function OutputPanel({
     workspaceId,
     errorMessage,
     isStreaming,
+    isCancelled,
 }: OutputPanelProps) {
     const hasOutput = blocks.some((block) => block.parts.some((p) => p.text.trim().length > 0));
 
@@ -78,16 +80,6 @@ export function OutputPanel({
                         >
                             Logs 상세 보기
                         </Button>
-
-                        // <Anchor
-                        //     size="sm"
-                        //     c="dimmed"
-                        //     component={Link}
-                        //     target="_blank"
-                        //     href={`/workspaces/${workspaceId}/logs/${callId}`}
-                        // >
-                        //     {callId}
-                        // </Anchor>
                     )}
                 </Group>
                 {errorMessage && (
@@ -95,7 +87,12 @@ export function OutputPanel({
                         {errorMessage}
                     </Alert>
                 )}
-                {!hasOutput && !isStreaming && <Text c="dimmed">아직 실행 결과가 없습니다.</Text>}
+                {isCancelled && (
+                    <Alert color="yellow" title="실행 중단">
+                        사용자에 의해 실행이 중단되었습니다.
+                    </Alert>
+                )}
+                {!hasOutput && !isStreaming && !isCancelled && <Text c="dimmed">아직 실행 결과가 없습니다.</Text>}
                 {!hasOutput && isStreaming && (
                     <Group gap="xs">
                         <Loader size="sm" />
