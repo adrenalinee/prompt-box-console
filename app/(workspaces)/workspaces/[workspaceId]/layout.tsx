@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { AppShell, Group, Text, Burger, Box, Select } from "@mantine/core";
+import { AppShell, Group, Text, Burger, Box, Select, ActionIcon } from "@mantine/core";
+import { IconMenu2 } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { AppShellNav } from "@/components/layout/AppShellNav";
 import { HeaderActions } from "@/components/layout/HeaderActions";
@@ -13,6 +14,7 @@ import { useParams, useRouter } from "next/navigation";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const [opened, { toggle }] = useDisclosure();
+    const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
     const params = useParams();
     const router = useRouter();
     const workspaceId = params?.workspaceId as string;
@@ -39,7 +41,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             navbar={{
                 width: 240,
                 breakpoint: "sm",
-                collapsed: { mobile: !opened },
+                collapsed: { mobile: !opened, desktop: !desktopOpened },
             }}
             padding="md"
         >
@@ -47,6 +49,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+                        <ActionIcon variant="subtle" onClick={toggleDesktop} visibleFrom="sm" size="input-sm" color="gray">
+                            <IconMenu2 size={18} />
+                        </ActionIcon>
                         <Text fw={700} component={Link} href="/" className="hover:opacity-80">
                             PromptBox
                         </Text>
