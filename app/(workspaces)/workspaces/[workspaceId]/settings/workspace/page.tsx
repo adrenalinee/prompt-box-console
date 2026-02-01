@@ -294,10 +294,12 @@ export default function WorkspaceSettingsPage() {
                                 <Select
                                     label="effort"
                                     data={[
-                                        { value: "DEFAULT", label: "DEFAULT" },
+                                        { value: "NONE", label: "NONE" },
+                                        { value: "MINIMAL", label: "MINIMAL" },
                                         { value: "LOW", label: "LOW" },
                                         { value: "MEDIUM", label: "MEDIUM" },
                                         { value: "HIGH", label: "HIGH" },
+                                        { value: "XHIGH", label: "XHIGH" },
                                     ]}
                                     clearable
                                     value={defaultOptionsForm.values.effort || null}

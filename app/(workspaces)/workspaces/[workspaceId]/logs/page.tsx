@@ -1,7 +1,19 @@
 "use client";
 
 import React from "react";
-import { Alert, Button, Group, Loader, Pagination, Select, Stack, Table, Text, Tooltip } from "@mantine/core";
+import {
+    Alert,
+    Button,
+    Group,
+    Loader,
+    NumberFormatter,
+    Pagination,
+    Select,
+    Stack,
+    Table,
+    Text,
+    Tooltip
+} from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { fetchLogsPage } from "@/lib/api/llmCalls";
 import { fetchWorkspaceModels } from "@/lib/api/settings";
@@ -100,6 +112,8 @@ export default function LogsPage() {
                         { value: "ERROR", label: "ERROR" },
                         { value: "RUNNING", label: "RUNNING" },
                         { value: "TIMEOUT", label: "TIMEOUT" },
+                        { value: "PENDING", label: "PENDING" },
+                        { value: "CANCEL_REQUESTED", label: "CANCEL_REQUESTED" },
                         { value: "CANCELLED", label: "CANCELLED" },
                     ]}
                     value={status || null}
@@ -154,7 +168,10 @@ export default function LogsPage() {
                                 <Table.Td>{log.llmModelId ?? "-"}</Table.Td>
                                 <Table.Td>{log.status ?? "-"}</Table.Td>
                                 <Table.Td>{log.createdAt ?? "-"}</Table.Td>
-                                <Table.Td>{log.elapsed ?? "-"}</Table.Td>
+                                <Table.Td>
+                                    {/*{log.elapsed ?? "-"}*/}
+                                    <NumberFormatter suffix="ms" value={log.elapsed} thousandSeparator />
+                                </Table.Td>
                                 <Table.Td ta="right">
                                     <Button
                                         size="xs"

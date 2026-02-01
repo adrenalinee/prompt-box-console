@@ -385,3 +385,10 @@ export async function fetchAllLogsPage(
 export async function fetchLog(callId: string) {
     return apiFetch<CallLogDetail>(`/llm-calls/${callId}`);
 }
+
+export async function cancelCall(callLogId: string, reason?: string) {
+    return apiFetch(`/llm-calls/${callLogId}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+    });
+}

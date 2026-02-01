@@ -387,7 +387,7 @@ export default function PromptDetailPage() {
                 </Stack>
                 <Menu position="bottom-end" shadow="md" width={180}>
                     <Menu.Target>
-                        <Tooltip label="Named prompt action">
+                        <Tooltip label="Named prompt 추가 메뉴">
                             <ActionIcon variant="subtle" aria-label="prompt menu">
                                 <IconDotsVertical size={16} />
                             </ActionIcon>
@@ -464,7 +464,7 @@ export default function PromptDetailPage() {
                         </Tooltip>
                         <Menu position="bottom-end" shadow="md" width={200}>
                             <Menu.Target>
-                                <Tooltip label="Named prompt reference action">
+                                <Tooltip label="Named prompt BRANCH/TAG 추가 메뉴">
                                     <ActionIcon variant="subtle" aria-label="ref menu">
                                         <IconDotsVertical size={16} />
                                     </ActionIcon>

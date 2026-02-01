@@ -140,6 +140,8 @@ export default function SettingsLogsPage() {
                         { value: "ERROR", label: "ERROR" },
                         { value: "RUNNING", label: "RUNNING" },
                         { value: "TIMEOUT", label: "TIMEOUT" },
+                        { value: "PENDING", label: "PENDING" },
+                        { value: "CANCEL_REQUESTED", label: "CANCEL_REQUESTED" },
                         { value: "CANCELLED", label: "CANCELLED" },
                     ]}
                     value={status || null}

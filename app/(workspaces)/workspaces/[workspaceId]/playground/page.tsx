@@ -4,10 +4,10 @@ import React from "react";
 import { Button, Grid, Group, Loader, Stack, Text } from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearchParams, useParams, usePathname, useRouter } from "next/navigation";
-import { IconArrowsDiff, IconPlayerPlay } from "@tabler/icons-react";
+import { IconArrowsDiff, IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
 import { fetchAdditionalInputs, fetchPrompt, fetchPrompts, fetchRefs } from "@/lib/api/prompts";
 import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
-import { executeCallStream, fetchLog, LlmStreamEvent } from "@/lib/api/llmCalls";
+import { executeCallStream, fetchLog, LlmStreamEvent, cancelCall } from "@/lib/api/llmCalls";
 import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel } from "@/components/playground/ExecutePanel";
 import { OutputPanel, type OutputBlock } from "@/components/playground/OutputPanel";
@@ -487,6 +487,18 @@ export default function PlaygroundPage() {
         },
     });
 
+    const cancelMutation = useMutation({
+        mutationFn: async (callLogId: string) => {
+            return cancelCall(callLogId, "User cancelled from Playground");
+        },
+    });
+
+    const handleStop = React.useCallback(() => {
+        if (callIdRef.current) {
+            cancelMutation.mutate(callIdRef.current);
+        }
+    }, []);
+
     if (promptsLoading) {
         return <Loader />;
     }
@@ -502,21 +514,32 @@ export default function PlaygroundPage() {
                     <Text fw={700} size="xl">
                         Playground
                     </Text>
-                    <Button
-                        leftSection={<IconPlayerPlay size={16} />}
-                        type="submit"
-                        form="playground-execute-form"
-                        variant="filled"
-                        loading={
-                            executeMutation.isPending ||
-                            refsLoading ||
-                            modelsLoading ||
-                            vendorsLoading ||
-                            apiKeysLoading
-                        }
-                    >
-                        실행
-                    </Button>
+                    {executeMutation.isPending ? (
+                        <Button
+                            leftSection={<IconPlayerStop size={16} />}
+                            variant="light"
+                            color="red"
+                            onClick={handleStop}
+                            loading={cancelMutation.isPending}
+                        >
+                            중단
+                        </Button>
+                    ) : (
+                        <Button
+                            leftSection={<IconPlayerPlay size={16} />}
+                            type="submit"
+                            form="playground-execute-form"
+                            variant="filled"
+                            loading={
+                                refsLoading ||
+                                modelsLoading ||
+                                vendorsLoading ||
+                                apiKeysLoading
+                            }
+                        >
+                            실행
+                        </Button>
+                    )}
                 </Group>
                 <Button variant="default" leftSection={<IconArrowsDiff size={16} />} disabled>
                     비교
@@ -563,6 +586,6 @@ export default function PlaygroundPage() {
                     />
                 </Grid.Col>
             </Grid>
-        </Stack>
+        </Stack >
     );
 }
