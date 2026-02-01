@@ -126,7 +126,7 @@ export function OutputPanel({
                                             const timingText = `first delta ${formatMs(
                                                 part.firstDeltaMs,
                                             )} · done ${formatMs(part.doneMs)}`;
-                                            let label = "Message";
+                                            let label: string;
                                             if (block.kind === "reasoning") {
                                                 label =
                                                     part.part === "SUMMARY"

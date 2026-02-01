@@ -130,11 +130,24 @@ export function LogDetail({ log }: LogDetailProps) {
             <Title order={3}>Log {callLog.id}</Title>
             <Paper p="md" withBorder>
                 <Stack>
-                    <Text>Workspace: {callLog.workspaceId ?? "-"}</Text>
-                    <Text>Model: {callLog.llmModelId ?? "-"}</Text>
-                    <Text>API Key: {callLog.llmApiKeyId ?? "-"}</Text>
-                    <Text>Status: {callLog.status ?? "-"}</Text>
-                    <Text>Elapsed: {callLog.elapsed ?? "-"}</Text>
+                    {Object.entries(callLog).map(([key, value]) => {
+                        const skippedKeys = [
+                            "errorMessage",
+                            "instructions",
+                            "llmCallOptions",
+                            "inputItems",
+                            "outputItems",
+                        ];
+                        if (skippedKeys.includes(key)) return null;
+                        return (
+                            <Group key={key}>
+                                <Text fw={500} style={{ textTransform: "capitalize" }}>
+                                    {key.replace(/([A-Z])/g, " $1")}:
+                                </Text>
+                                <Text style={{ wordBreak: "break-all" }}>{String(value)}</Text>
+                            </Group>
+                        );
+                    })}
                 </Stack>
             </Paper>
 
@@ -235,7 +248,103 @@ export function LogDetail({ log }: LogDetailProps) {
                     </CopyButton>
                 </Group>
                 <Stack>
-                    {log.outputItems?.map((item) => renderItemBox(item))}
+                    {log.outputItems?.map((item) => {
+                        const { id, position, outputText, parts, ...rest } = item as any;
+                        return (
+                            <Paper key={id} p="sm" withBorder bg="gray.0">
+                                <Stack gap="xs">
+                                    <Group>
+                                        <Text fw={500} size="sm">
+                                            ID: {id}
+                                        </Text>
+                                        <Text fw={500} size="sm">
+                                            Position: {position}
+                                        </Text>
+                                    </Group>
+
+                                    {/* Render remaining fields dynamically */}
+                                    {Object.entries(rest).map(([key, value]) => (
+                                        <Group key={key}>
+                                            <Text fw={500} size="sm" style={{ textTransform: "capitalize" }}>
+                                                {key.replace(/([A-Z])/g, " $1")}:
+                                            </Text>
+                                            <Text size="sm" style={{ wordBreak: "break-all" }}>
+                                                {String(value)}
+                                            </Text>
+                                        </Group>
+                                    ))}
+
+                                    <Stack gap={4}>
+                                        <Text fw={500} size="sm">
+                                            Output Text:
+                                        </Text>
+                                        <Paper p="xs" withBorder bg="white">
+                                            <Spoiler maxHeight={100} showLabel="More" hideLabel="Hide">
+                                                <Text
+                                                    style={{
+                                                        whiteSpace: "pre-wrap",
+                                                        wordBreak: "break-word",
+                                                        fontFamily: "monospace",
+                                                    }}
+                                                    size="sm"
+                                                >
+                                                    {outputText}
+                                                </Text>
+                                            </Spoiler>
+                                        </Paper>
+                                    </Stack>
+
+                                    {parts && parts.length > 0 && (
+                                        <Stack gap={4}>
+                                            <Text fw={500} size="sm">
+                                                Parts:
+                                            </Text>
+                                            <Stack gap="xs">
+                                                {parts.map((part: any, index: number) => {
+                                                    const { part: partName, text, ...partRest } = part;
+                                                    return (
+                                                        <Paper key={index} p="xs" withBorder bg="white">
+                                                            <Text size="xs" fw={700} c="dimmed" mb={4}>
+                                                                {partName}
+                                                            </Text>
+                                                            <Spoiler
+                                                                maxHeight={100}
+                                                                showLabel="More"
+                                                                hideLabel="Hide"
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        whiteSpace: "pre-wrap",
+                                                                        wordBreak: "break-word",
+                                                                        fontFamily: "monospace",
+                                                                    }}
+                                                                    size="sm"
+                                                                >
+                                                                    {text}
+                                                                </Text>
+                                                            </Spoiler>
+                                                            {Object.entries(partRest).map(([k, v]) => (
+                                                                <Group key={k} mt={4}>
+                                                                    <Text
+                                                                        fw={500}
+                                                                        size="xs"
+                                                                        style={{ textTransform: "capitalize" }}
+                                                                    >
+                                                                        {k}:
+                                                                    </Text>
+                                                                    <Text size="xs">{String(v)}</Text>
+                                                                </Group>
+                                                            ))}
+                                                        </Paper>
+                                                    );
+                                                })}
+                                            </Stack>
+                                        </Stack>
+                                    )}
+                                </Stack>
+                            </Paper>
+                        );
+                    })}
                     {!log.outputItems?.length && <Text c="dimmed">No output items.</Text>}
                 </Stack>
             </Paper>

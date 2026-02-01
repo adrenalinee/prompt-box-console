@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ActionIcon, Button, Group, Modal, Stack, Text, Alert, TextInput, ScrollArea, Table } from "@mantine/core";
+import { ActionIcon, Button, Group, Modal, Stack, Text, Alert, TextInput, ScrollArea, Table, Select } from "@mantine/core";
 import { IconAdjustments, IconSearch, IconServer } from "@tabler/icons-react";
 import type { ApiKey, Model, Vendor } from "@/lib/api/settings";
 
@@ -161,16 +161,49 @@ export function ModelSelector({
                 size="xl"
             >
                 <Stack>
+                    {apiKeys.length === 0 && (
+                        <Alert color="red" title="API Key 필요">
+                            등록된 API Key가 없습니다. 설정 페이지에서 API Key를 먼저 등록해주세요.
+                        </Alert>
+                    )}
                     {modelsError && (
                         <Alert color="red" title="오류">
                             {getErrorMessage(modelsError)}
                         </Alert>
                     )}
-                    <TextInput
-                        placeholder="모델 검색"
-                        leftSection={<IconSearch size={16} />}
-                        value={modelSearch}
-                        onChange={(event) => setModelSearch(event.currentTarget.value)}
+
+                    <Group grow>
+                        <Select
+                            placeholder="All Vendors"
+                            leftSection={<IconServer size={16} />}
+                            data={[
+                                { value: "ALL", label: "All Vendors" },
+                                ...vendors.map((v) => ({ value: v.id, label: v.name })),
+                            ]}
+                            value={vendorId || "ALL"}
+                            onChange={(val) => onVendorChange?.(val === "ALL" ? null : val)}
+                            clearable
+                        />
+                        <TextInput
+                            placeholder="모델 검색"
+                            leftSection={<IconSearch size={16} />}
+                            value={modelSearch}
+                            onChange={(event) => setModelSearch(event.currentTarget.value)}
+                        />
+                    </Group>
+
+                    <Select
+                        label="Use API Key"
+                        placeholder="Select API Key"
+                        data={apiKeys
+                            .filter((k) => !vendorId || k.vendorId === vendorId)
+                            .map((k) => ({
+                                value: k.id,
+                                label: `${vendorMap.get(k.vendorId) || k.vendorId} / ${k.name}`,
+                            }))}
+                        value={selectedApiKeyId}
+                        onChange={(val) => val && onApiKeyChange(val)}
+                        error={!selectedApiKeyId ? "API Key is required" : null}
                     />
                     <ScrollArea h={360}>
                         <Table striped highlightOnHover>
@@ -207,6 +240,15 @@ export function ModelSelector({
                                                     size="xs"
                                                     onClick={() => {
                                                         onModelChange(String(model.id));
+                                                        // Auto-select a valid key for this vendor if current key is mismatch
+                                                        const validKeys = apiKeys.filter(k => k.vendorId === model.vendorId);
+                                                        // If currently selected key is not valid for this vendor, change it
+                                                        const currentKey = apiKeys.find(k => k.id === selectedApiKeyId);
+                                                        if (!currentKey || currentKey.vendorId !== model.vendorId) {
+                                                            if (validKeys.length > 0) {
+                                                                onApiKeyChange(validKeys[0].id);
+                                                            }
+                                                        }
                                                         setModalOpen(false);
                                                     }}
                                                     type="button"
