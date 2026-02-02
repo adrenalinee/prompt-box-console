@@ -248,7 +248,7 @@ export default function SettingsLogsPage() {
                         {detail?.callLog?.workspaceId && (
                             <Button
                                 variant="light"
-                                leftSection={<IconExternalLink size={16} />}
+                                leftSection={<IconExternalLink size={18} />}
                                 component="a"
                                 target="_blank"
                                 rel="noreferrer"

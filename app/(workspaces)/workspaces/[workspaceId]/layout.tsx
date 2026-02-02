@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { AppShell, Group, Text, Burger, Box, Select, ActionIcon } from "@mantine/core";
+import {AppShell, Group, Text, Burger, Box, Select, ActionIcon, Tooltip} from "@mantine/core";
 import { IconMenu2 } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { AppShellNav } from "@/components/layout/AppShellNav";
@@ -49,9 +49,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <ActionIcon variant="subtle" onClick={toggleDesktop} visibleFrom="sm" size="input-sm" color="gray">
-                            <IconMenu2 size={18} />
-                        </ActionIcon>
                         <Text fw={700} component={Link} href="/" className="hover:opacity-80">
                             PromptBox
                         </Text>
@@ -67,6 +64,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             size="xs"
                             w={200}
                         />
+                        <Tooltip label="사이드 메뉴 열고 닫기">
+                            <ActionIcon variant="subtle" onClick={toggleDesktop} visibleFrom="sm" size="input-sm" color="gray">
+                                <IconMenu2 size={18} />
+                            </ActionIcon>
+                        </Tooltip>
                     </Group>
                     <HeaderActions workspaceId={workspaceId} />
                 </Group>
