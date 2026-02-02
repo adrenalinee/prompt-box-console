@@ -11,7 +11,7 @@ env:
   REPOSITORY_NAME: 'prompt-box'
   REPOSITORY_TOKEN: ${{ secrets.ORG_REPO_TOKEN }}
   BRANCH_NAME: ${{ inputs.branch || github.event.inputs.branch }}
-  BUILD_TAG: ${{ inputs.tag || github.event.inputs.tag }}
+  BUILD_TAG: ${{ inputs.tag || github.event.inputs.tag || 'latest' }}
   # GCP Project ID
   TARGET_PROJECT_ID: ${{ (inputs.tag == 'prod' || github.event.inputs.tag == 'prod') && secrets.GCP_MYSTIX_PROJECT_ID_PROD || secrets.GCP_MYSTIX_PROJECT_ID_DEV }}
   # Cloud run 서비스명
