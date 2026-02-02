@@ -363,11 +363,18 @@ export function ExecutePanel({
     );
     const hasPromptContent =
         form.values.instructions.trim().length > 0 || effectiveInputItems.length > 0;
+
+    // Calculate effective baseline inputs (remove empty items) for comparison
+    const effectiveBaselineInputs = React.useMemo(
+        () => refBaselineInputs.filter((item) => item.message.trim().length > 0),
+        [refBaselineInputs]
+    );
+
     const isModified =
         !!form.values.promptId &&
         !!form.values.refId &&
         (form.values.instructions.trim() !== refBaselineInstructions.trim() ||
-            JSON.stringify(effectiveInputItems) !== JSON.stringify(refBaselineInputs));
+            JSON.stringify(effectiveInputItems) !== JSON.stringify(effectiveBaselineInputs));
 
     const hasInvalidInputItems = form.values.inputItems
         .slice(0, -1)
