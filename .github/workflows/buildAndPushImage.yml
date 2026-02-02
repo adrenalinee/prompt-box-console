@@ -41,7 +41,6 @@ jobs:
           gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
           
       - name: Build and Push
-        if: ${{ inputs.push || github.event.inputs.push }}
         run: |
           cd ${{ env.REPOSITORY_NAME }}
           docker build -t ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${{ env.BUILD_TAG }} .
