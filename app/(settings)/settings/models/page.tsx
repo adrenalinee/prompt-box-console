@@ -33,7 +33,7 @@ import {
 } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function SettingsModelsPage() {
+function SettingsModelsContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -502,5 +502,13 @@ export default function SettingsModelsPage() {
                 </Stack>
             </Modal>
         </Stack>
+    );
+}
+
+export default function SettingsModelsPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <SettingsModelsContent />
+        </React.Suspense>
     );
 }

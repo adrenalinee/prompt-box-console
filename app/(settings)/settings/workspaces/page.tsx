@@ -34,7 +34,7 @@ import {
 } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function WorkspacesPage() {
+function WorkspacesContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -497,5 +497,13 @@ export default function WorkspacesPage() {
                 </Stack>
             </Modal>
         </Stack>
+    );
+}
+
+export default function WorkspacesPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <WorkspacesContent />
+        </React.Suspense>
     );
 }

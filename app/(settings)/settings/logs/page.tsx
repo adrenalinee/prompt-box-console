@@ -23,7 +23,7 @@ import { fetchModels } from "@/lib/api/settings";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function SettingsLogsPage() {
+function SettingsLogsContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -263,5 +263,13 @@ export default function SettingsLogsPage() {
             </Modal>
 
         </Stack>
+    );
+}
+
+export default function SettingsLogsPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <SettingsLogsContent />
+        </React.Suspense>
     );
 }

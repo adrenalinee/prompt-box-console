@@ -30,7 +30,7 @@ import {
 } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function VendorsPage() {
+function VendorsContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -312,5 +312,13 @@ export default function VendorsPage() {
                 </Stack>
             </Modal>
         </Stack>
+    );
+}
+
+export default function VendorsPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <VendorsContent />
+        </React.Suspense>
     );
 }
