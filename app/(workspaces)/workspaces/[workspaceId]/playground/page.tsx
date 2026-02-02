@@ -138,6 +138,7 @@ export default function PlaygroundPage() {
     const [callId, setCallId] = React.useState<string>("");
     const [outputError, setOutputError] = React.useState<string>("");
     const [isCancelled, setIsCancelled] = React.useState<boolean>(false);
+    const [overrideInstructions, setOverrideInstructions] = React.useState<string | undefined>(undefined);
     const callIdRef = React.useRef<string>("");
     const requestStartedAtRef = React.useRef<number>(0);
     const outputItemsRef = React.useRef<{
@@ -162,6 +163,23 @@ export default function PlaygroundPage() {
         indexToItem: new Map(),
         nextIndex: 0,
     });
+
+    React.useEffect(() => {
+        if (initialPromptId && initialRefId) {
+            try {
+                const key = `playground_override_${initialPromptId}_${initialRefId}`;
+                const saved = sessionStorage.getItem(key);
+                if (saved) {
+                    setOverrideInstructions(saved);
+                    // Keep the key in session storage so that if the user navigates Back, the Prompt Detail page can recover the draft.
+                    // The Prompt Detail page should handle clearing it when appropriate (e.g. on Save).
+                    // sessionStorage.removeItem(key); 
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+    }, [initialPromptId, initialRefId]);
 
     const resetOutputState = React.useCallback(() => {
         outputItemsRef.current = {
@@ -579,6 +597,10 @@ export default function PlaygroundPage() {
                         additionalInputs={additionalInputs}
                         workspaceDefaultModelId={workspaceData?.defaultModelId}
                         onExecute={(values) => executeMutation.mutate(values)}
+                        initialOverrideInstructions={
+                            // Only apply override if the selected Ref matches the initial Ref for which we loaded the override
+                            selectedRefId === initialRefId ? overrideInstructions : undefined
+                        }
                     />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 6 }}>

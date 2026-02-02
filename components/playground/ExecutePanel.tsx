@@ -61,6 +61,7 @@ export type ExecuteFormValues = {
 };
 
 type ExecutePanelProps = {
+    initialOverrideInstructions?: string; // Added prop
     workspaceId: string;
     prompts: Prompt[];
     promptsError?: unknown;
@@ -130,6 +131,7 @@ export function ExecutePanel({
     additionalInputs,
     workspaceDefaultModelId,
     onExecute,
+    initialOverrideInstructions, // Added destructuring
 }: ExecutePanelProps) {
     const queryClient = useQueryClient();
     const promptChangeRef = React.useRef<{ id: string; name?: string } | null>(null);
@@ -143,6 +145,10 @@ export function ExecutePanel({
     const [optionsModalOpen, setOptionsModalOpen] = React.useState(false);
     const [refBaselineInstructions, setRefBaselineInstructions] = React.useState("");
     const [refBaselineInputs, setRefBaselineInputs] = React.useState<InputItemForm[]>([]);
+
+    // Track override consumption
+    const overrideConsumedRef = React.useRef(false);
+    const lastRefIdRef = React.useRef<string | null>(null);
 
     const form = useForm<ExecuteFormValues>({
         initialValues: {
@@ -251,12 +257,39 @@ export function ExecutePanel({
                 setRefBaselineInstructions("");
                 form.setFieldValue("instructions", "");
                 setRefBaselineInputs([]);
+                lastRefIdRef.current = null;
             }
             return;
         }
-        setRefBaselineInstructions(selectedRef.instructions ?? "");
-        form.setFieldValue("instructions", selectedRef.instructions ?? "");
-    }, [selectedRef?.id, selectedRef?.instructions]);
+
+        const serverInstructions = selectedRef.instructions ?? "";
+        const currentRefId = String(selectedRef.id);
+        const refChanged = lastRefIdRef.current !== currentRefId;
+
+        // Apply override if available and not yet consumed
+        if (initialOverrideInstructions !== undefined && !overrideConsumedRef.current) {
+            form.setFieldValue("instructions", initialOverrideInstructions);
+            setRefBaselineInstructions(serverInstructions);
+            overrideConsumedRef.current = true;
+            lastRefIdRef.current = currentRefId;
+            return;
+        }
+
+        // Standard Sync Logic
+        // If Ref changed, always update.
+        if (refChanged) {
+            form.setFieldValue("instructions", serverInstructions);
+        } else {
+            // Ref updated (same ID). Only update if user hasn't modified it (dirty check).
+            // Using loose equality for safety, or strict.
+            if (form.values.instructions === refBaselineInstructions) {
+                form.setFieldValue("instructions", serverInstructions);
+            }
+        }
+
+        setRefBaselineInstructions(serverInstructions);
+        lastRefIdRef.current = currentRefId;
+    }, [selectedRef?.id, selectedRef?.instructions, initialOverrideInstructions]);
 
     // Sync additional Inputs when Ref changes
     React.useEffect(() => {

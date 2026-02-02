@@ -110,6 +110,7 @@ export default function PromptDetailPage() {
     const [diffLeftId, setDiffLeftId] = React.useState<number | null>(null);
     const [diffRightId, setDiffRightId] = React.useState<number | null>(null);
     const [orderedInputs, setOrderedInputs] = React.useState<AdditionalInputItem[]>([]);
+    const [currentInstructions, setCurrentInstructions] = React.useState<string>("");
 
     const { data: prompt, isLoading: promptLoading } = useQuery({
         queryKey: queryKeys.prompt(promptId),
@@ -213,13 +214,28 @@ export default function PromptDetailPage() {
     }, [prompt, promptEditOpen]);
 
     React.useEffect(() => {
-        if (selectedRef && !refEditOpen) {
-            refMetaForm.setValues({
-                name: selectedRef.name ?? "",
-                description: selectedRef.description ?? "",
-            });
+        if (selectedRef) {
+            if (!refEditOpen) {
+                refMetaForm.setValues({
+                    name: selectedRef.name ?? "",
+                    description: selectedRef.description ?? "",
+                });
+            }
+
+            // Check if there's a draft in session storage (e.g. returning from Playground)
+            let nextInstructions = selectedRef.instructions;
+            try {
+                const key = `playground_override_${promptId}_${selectedRef.id}`;
+                const draft = sessionStorage.getItem(key);
+                if (draft !== null) {
+                    nextInstructions = draft;
+                }
+            } catch (e) {
+                // ignore
+            }
+            setCurrentInstructions(nextInstructions);
         }
-    }, [selectedRef, refEditOpen]);
+    }, [selectedRef?.id, selectedRef?.instructions, refEditOpen]);
 
     React.useEffect(() => {
         if (diffOpen && refs.length) {
@@ -235,8 +251,15 @@ export default function PromptDetailPage() {
     const updateRefMutation = useMutation({
         mutationFn: (payload: { refId: number; instructions: string }) =>
             updateRef(promptId, payload.refId, { instructions: payload.instructions }),
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: queryKeys.refs(promptId) });
+            // Clear the draft from session storage on save
+            try {
+                const key = `playground_override_${promptId}_${variables.refId}`;
+                sessionStorage.removeItem(key);
+            } catch (e) {
+                // ignore
+            }
         },
     });
 
@@ -454,8 +477,19 @@ export default function PromptDetailPage() {
                         <Tooltip label="Playground 에서 현재 reference 를 테스트합니다." withArrow>
                             <div>
                                 <Button
-                                    component={Link}
-                                    href={`/workspaces/${workspaceId}/playground?promptId=${promptId}${selectedRef ? `&refId=${selectedRef.id}` : ""}`}
+                                    onClick={() => {
+                                        if (selectedRef) {
+                                            try {
+                                                const key = `playground_override_${promptId}_${selectedRef.id}`;
+                                                sessionStorage.setItem(key, currentInstructions);
+                                            } catch (e) {
+                                                // ignore
+                                            }
+                                            router.push(
+                                                `/workspaces/${workspaceId}/playground?promptId=${promptId}&refId=${selectedRef.id}`,
+                                            );
+                                        }
+                                    }}
                                     disabled={!selectedRef}
                                 >
                                     Playground
@@ -504,14 +538,34 @@ export default function PromptDetailPage() {
                     <Group justify="space-between" align="center">
                         <Text fw={600}>Instructions</Text>
                         {selectedRef && selectedIsBranch && (
-                            <Button
-                                size="xs"
-                                type="submit"
-                                form="prompt-editor-form"
-                                loading={updateRefMutation.isPending}
-                            >
-                                저장
-                            </Button>
+                            <Group gap="xs">
+                                {currentInstructions !== selectedRef.instructions && (
+                                    <Button
+                                        color="orange"
+                                        variant="light"
+                                        size="xs"
+                                        onClick={() => {
+                                            if (window.confirm("초기 상태로 되돌리시겠습니까? 저장하지 않은 내용은 사라집니다.")) {
+                                                try {
+                                                    const key = `playground_override_${promptId}_${selectedRef.id}`;
+                                                    sessionStorage.removeItem(key);
+                                                } catch (e) { }
+                                                setCurrentInstructions(selectedRef.instructions);
+                                            }
+                                        }}
+                                    >
+                                        수정됨 (되돌리기)
+                                    </Button>
+                                )}
+                                <Button
+                                    size="xs"
+                                    type="submit"
+                                    form="prompt-editor-form"
+                                    loading={updateRefMutation.isPending}
+                                >
+                                    저장
+                                </Button>
+                            </Group>
                         )}
                     </Group>
                     {refsLoading ? (
@@ -522,16 +576,18 @@ export default function PromptDetailPage() {
                         </Alert>
                     ) : selectedIsBranch ? (
                         <PromptEditor
+                            key={selectedRef.id}
                             formId="prompt-editor-form"
                             hideLabel
                             hideSaveButton
-                            initialInstructions={selectedRef.instructions}
+                            initialInstructions={currentInstructions}
                             onSave={(instructions) =>
                                 updateRefMutation.mutate({
                                     refId: selectedRef.id,
                                     instructions,
                                 })
                             }
+                            onChange={(val) => setCurrentInstructions(val)}
                             isSaving={updateRefMutation.isPending}
                         />
                     ) : (
