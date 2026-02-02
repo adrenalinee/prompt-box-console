@@ -144,9 +144,9 @@ export default function WorkspacesPage() {
             topP?: number;
             maxTokens?: number;
             textFormat?: string;
-            effort?: string;
-            verbosity?: string;
-            summary?: string;
+            effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
+            verbosity?: "LOW" | "MEDIUM" | "HIGH";
+            summary?: "AUTO" | "CONCISE" | "DETAILED";
         }) => upsertDefaultOptions(defaultOptionsTarget?.id || "", values),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
@@ -275,39 +275,39 @@ export default function WorkspacesPage() {
                                                             description: workspace.description ?? "",
                                                         });
                                                     }}
-                                            >
-                                                수정
-                                            </Menu.Item>
-                                            <Menu.Item
-                                                onClick={() => {
-                                                    fetchDefaultOptions(resolveWorkspaceId(workspace)).then((data) => {
-                                                        setDefaultOptionsTarget({
+                                                >
+                                                    수정
+                                                </Menu.Item>
+                                                <Menu.Item
+                                                    onClick={() => {
+                                                        fetchDefaultOptions(resolveWorkspaceId(workspace)).then((data) => {
+                                                            setDefaultOptionsTarget({
+                                                                id: resolveWorkspaceId(workspace),
+                                                                name: workspace.name,
+                                                            });
+                                                            defaultOptionsForm.setValues({
+                                                                temperature: data?.temperature ?? "",
+                                                                topP: data?.topP ?? "",
+                                                                maxTokens: data?.maxTokens ?? "",
+                                                                textFormat: data?.textFormat ?? "",
+                                                                effort: data?.effort ?? "",
+                                                                verbosity: data?.verbosity ?? "",
+                                                                summary: data?.summary ?? "",
+                                                            });
+                                                        });
+                                                    }}
+                                                >
+                                                    defaultOptions 수정
+                                                </Menu.Item>
+                                                <Menu.Item
+                                                    color="red"
+                                                    onClick={() =>
+                                                        setDeleteTarget({
                                                             id: resolveWorkspaceId(workspace),
                                                             name: workspace.name,
-                                                        });
-                                                        defaultOptionsForm.setValues({
-                                                            temperature: data?.temperature ?? "",
-                                                            topP: data?.topP ?? "",
-                                                            maxTokens: data?.maxTokens ?? "",
-                                                            textFormat: data?.textFormat ?? "",
-                                                            effort: data?.effort ?? "",
-                                                            verbosity: data?.verbosity ?? "",
-                                                            summary: data?.summary ?? "",
-                                                        });
-                                                    });
-                                                }}
-                                            >
-                                                defaultOptions 수정
-                                            </Menu.Item>
-                                            <Menu.Item
-                                                color="red"
-                                                onClick={() =>
-                                                    setDeleteTarget({
-                                                        id: resolveWorkspaceId(workspace),
-                                                        name: workspace.name,
-                                                    })
-                                                }
-                                            >
+                                                        })
+                                                    }
+                                                >
                                                     삭제
                                                 </Menu.Item>
                                             </Menu.Dropdown>
@@ -393,9 +393,9 @@ export default function WorkspacesPage() {
                             topP: values.topP === "" ? undefined : values.topP,
                             maxTokens: values.maxTokens === "" ? undefined : values.maxTokens,
                             textFormat: values.textFormat.trim() || undefined,
-                            effort: values.effort || undefined,
-                            verbosity: values.verbosity || undefined,
-                            summary: values.summary || undefined,
+                            effort: (values.effort as "DEFAULT" | "LOW" | "MEDIUM" | "HIGH") || undefined,
+                            verbosity: (values.verbosity as "LOW" | "MEDIUM" | "HIGH") || undefined,
+                            summary: (values.summary as "AUTO" | "CONCISE" | "DETAILED") || undefined,
                         });
                     })}
                 >

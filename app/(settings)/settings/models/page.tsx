@@ -367,7 +367,7 @@ export default function SettingsModelsPage() {
                         mutation.mutate({
                             name: values.name,
                             modelKey: values.modelKey,
-                            modelType: values.modelType,
+                            modelType: (values.modelType as "STANDARD" | "REASONING"),
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -424,7 +424,7 @@ export default function SettingsModelsPage() {
                             vendorId: values.vendorId || undefined,
                             name: values.name || undefined,
                             modelKey: values.modelKey || undefined,
-                            modelType: values.modelType || undefined,
+                            modelType: (values.modelType as "STANDARD" | "REASONING") || undefined,
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
