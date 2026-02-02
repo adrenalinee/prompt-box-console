@@ -7,6 +7,7 @@ import { useForm } from "@mantine/form";
 type PromptEditorProps = {
     initialInstructions: string;
     onSave: (instructions: string) => void;
+    onChange?: (instructions: string) => void; // Added
     isSaving?: boolean;
     formId?: string;
     hideLabel?: boolean;
@@ -16,6 +17,7 @@ type PromptEditorProps = {
 export function PromptEditor({
     initialInstructions,
     onSave,
+    onChange, // Added
     isSaving,
     formId = "prompt-editor-form",
     hideLabel,
@@ -25,6 +27,9 @@ export function PromptEditor({
         initialValues: {
             instructions: initialInstructions,
         },
+        onValuesChange: (values) => {
+            onChange?.(values.instructions);
+        }
     });
 
     React.useEffect(() => {

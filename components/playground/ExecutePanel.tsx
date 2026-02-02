@@ -61,6 +61,7 @@ export type ExecuteFormValues = {
 };
 
 type ExecutePanelProps = {
+    initialOverrideInstructions?: string; // Added prop
     workspaceId: string;
     prompts: Prompt[];
     promptsError?: unknown;
@@ -130,6 +131,7 @@ export function ExecutePanel({
     additionalInputs,
     workspaceDefaultModelId,
     onExecute,
+    initialOverrideInstructions, // Added destructuring
 }: ExecutePanelProps) {
     const queryClient = useQueryClient();
     const promptChangeRef = React.useRef<{ id: string; name?: string } | null>(null);
@@ -143,6 +145,10 @@ export function ExecutePanel({
     const [optionsModalOpen, setOptionsModalOpen] = React.useState(false);
     const [refBaselineInstructions, setRefBaselineInstructions] = React.useState("");
     const [refBaselineInputs, setRefBaselineInputs] = React.useState<InputItemForm[]>([]);
+
+    // Track override consumption
+    const overrideConsumedRef = React.useRef(false);
+    const lastRefIdRef = React.useRef<string | null>(null);
 
     const form = useForm<ExecuteFormValues>({
         initialValues: {
@@ -251,12 +257,39 @@ export function ExecutePanel({
                 setRefBaselineInstructions("");
                 form.setFieldValue("instructions", "");
                 setRefBaselineInputs([]);
+                lastRefIdRef.current = null;
             }
             return;
         }
-        setRefBaselineInstructions(selectedRef.instructions ?? "");
-        form.setFieldValue("instructions", selectedRef.instructions ?? "");
-    }, [selectedRef?.id, selectedRef?.instructions]);
+
+        const serverInstructions = selectedRef.instructions ?? "";
+        const currentRefId = String(selectedRef.id);
+        const refChanged = lastRefIdRef.current !== currentRefId;
+
+        // Apply override if available and not yet consumed
+        if (initialOverrideInstructions !== undefined && !overrideConsumedRef.current) {
+            form.setFieldValue("instructions", initialOverrideInstructions);
+            setRefBaselineInstructions(serverInstructions);
+            overrideConsumedRef.current = true;
+            lastRefIdRef.current = currentRefId;
+            return;
+        }
+
+        // Standard Sync Logic
+        // If Ref changed, always update.
+        if (refChanged) {
+            form.setFieldValue("instructions", serverInstructions);
+        } else {
+            // Ref updated (same ID). Only update if user hasn't modified it (dirty check).
+            // Using loose equality for safety, or strict.
+            if (form.values.instructions === refBaselineInstructions) {
+                form.setFieldValue("instructions", serverInstructions);
+            }
+        }
+
+        setRefBaselineInstructions(serverInstructions);
+        lastRefIdRef.current = currentRefId;
+    }, [selectedRef?.id, selectedRef?.instructions, initialOverrideInstructions]);
 
     // Sync additional Inputs when Ref changes
     React.useEffect(() => {
@@ -330,11 +363,18 @@ export function ExecutePanel({
     );
     const hasPromptContent =
         form.values.instructions.trim().length > 0 || effectiveInputItems.length > 0;
+
+    // Calculate effective baseline inputs (remove empty items) for comparison
+    const effectiveBaselineInputs = React.useMemo(
+        () => refBaselineInputs.filter((item) => item.message.trim().length > 0),
+        [refBaselineInputs]
+    );
+
     const isModified =
         !!form.values.promptId &&
         !!form.values.refId &&
         (form.values.instructions.trim() !== refBaselineInstructions.trim() ||
-            JSON.stringify(effectiveInputItems) !== JSON.stringify(refBaselineInputs));
+            JSON.stringify(effectiveInputItems) !== JSON.stringify(effectiveBaselineInputs));
 
     const hasInvalidInputItems = form.values.inputItems
         .slice(0, -1)
@@ -379,6 +419,26 @@ export function ExecutePanel({
         handleSelectPrompt(promptId);
     };
 
+
+    const handleReset = () => {
+        if (window.confirm("초기 상태로 되돌리시겠습니까? 저장하지 않은 내용은 사라집니다.")) {
+            form.setFieldValue("instructions", refBaselineInstructions);
+            // Also reset inputs to baseline
+            if (refBaselineInputs.length > 0) {
+                form.setFieldValue("inputItems", normalizeInputItems(refBaselineInputs));
+            } else {
+                form.setFieldValue("inputItems", [{ role: "USER", message: "" }]);
+            }
+
+            // Clear session storage override
+            try {
+                if (form.values.promptId && form.values.refId) {
+                    const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
+                    sessionStorage.removeItem(key);
+                }
+            } catch (e) { }
+        }
+    };
 
     return (
         <>
@@ -500,6 +560,21 @@ export function ExecutePanel({
                                     title: "저장 완료",
                                     message: "수정내역이 저장되었습니다.",
                                 });
+
+                                // Reset dirty state
+                                setRefBaselineInstructions(form.values.instructions);
+                                setRefBaselineInputs(normalizeInputItems(form.values.inputItems));
+
+                                // Clear session storage override
+                                try {
+                                    const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
+                                    sessionStorage.removeItem(key);
+                                } catch (e) { }
+
+                                // Invalidate queries to fetch fresh data
+                                queryClient.invalidateQueries({ queryKey: queryKeys.refs(form.values.promptId) });
+                                queryClient.invalidateQueries({ queryKey: queryKeys.prompt(form.values.promptId) });
+                                queryClient.invalidateQueries({ queryKey: queryKeys.additionalInputs(form.values.promptId, Number(form.values.refId)) });
                             } catch (error) {
                                 if (error && typeof error === "object" && "status" in error) {
                                     return;
@@ -516,6 +591,7 @@ export function ExecutePanel({
                             setCreateRefOpen({ type: "BRANCH" });
                         }}
                         onRequestPromptChange={requestPromptChange}
+                        onReset={handleReset}
                     />
 
                     <Textarea

@@ -1,0 +1,59 @@
+name: Create and publish a Docker image to GCP Artifact Registry, Deploy to Cloudtype
+
+on:
+  workflow_dispatch:
+    branches:
+      - '*'
+
+env:
+  # --- Github 변수 ---
+  REPOSITORY_PATH: 'mystix-ai'
+  REPOSITORY_NAME: 'prompt-box'
+  REPOSITORY_TOKEN: ${{ secrets.ORG_REPO_TOKEN }}
+  BRANCH_NAME: ${{ inputs.branch || github.event.inputs.branch }}
+  BUILD_TAG: ${{ inputs.tag || github.event.inputs.tag }}
+  # GCP Project ID
+  TARGET_PROJECT_ID: ${{ (inputs.tag == 'prod' || github.event.inputs.tag == 'prod') && secrets.GCP_MYSTIX_PROJECT_ID_PROD || secrets.GCP_MYSTIX_PROJECT_ID_DEV }}
+  # Cloud run 서비스명
+  SERVICE_NAME: ${{ (inputs.tag || github.event.inputs.tag) == 'prod' && 'prompt-box-prod' || 'prompt-box-dev' }}
+  # GCP Artifact Registry 경로 --- 이미지 경로 (이미지는 항상 DEV 프로젝트 GAR 사용) ---
+  REGION: asia-northeast3
+  IMAGE_PATH: asia-northeast3-docker.pkg.dev/${{ secrets.GCP_MYSTIX_PROJECT_ID_DEV }}/mystix-ai
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+  # 1. GCP 인증
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: ${{ (env.BUILD_TAG == 'prod') && secrets.GCP_MYSTIX_SA_PROD || secrets.GCP_MYSTIX_SA_DEV }}
+
+      # 2. 도커 인증 세션을 gcloud와 동기화 (이게 핵심!)
+      - name: 'Docker Auth with gcloud'
+        run: |
+          gcloud auth configure-docker asia-northeast3-docker.pkg.dev --quiet
+          
+      - name: Build and Push
+        if: ${{ inputs.push || github.event.inputs.push }}
+        run: |
+          cd ${{ env.REPOSITORY_NAME }}
+          docker build -t ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${{ env.BUILD_TAG }} .
+          docker push ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${{ env.BUILD_TAG }}
+
+      # 5. Cloud Run 배포
+      - name: Deploy to Cloud Run
+        if: ${{ inputs.deploy || github.event.inputs.deploy }}
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          project_id: ${{ env.TARGET_PROJECT_ID }}
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${{ env.BUILD_TAG }}
+          flags: '--port=3000 --allow-unauthenticated'
