@@ -28,6 +28,9 @@ type PromptSelectorProps = {
 
     // For handling prompt change confirmation if modified
     onRequestPromptChange: (promptId: string, name?: string) => void;
+
+    // Added: Reset handler
+    onReset: () => void;
 };
 
 export function PromptSelector({
@@ -46,6 +49,7 @@ export function PromptSelector({
     onSaveChanges,
     onCreateBranch,
     onRequestPromptChange,
+    onReset,
 }: PromptSelectorProps) {
 
     const [promptModalOpen, setPromptModalOpen] = React.useState(false);
@@ -90,7 +94,16 @@ export function PromptSelector({
                 </Button>
             </Group>
             <Group gap="xs">
-                {isModified && <Badge color="orange">수정됨</Badge>}
+                {isModified && (
+                    <Button
+                        variant="light"
+                        color="orange"
+                        size="compact-xs"
+                        onClick={onReset}
+                    >
+                        수정됨 (되돌리기)
+                    </Button>
+                )}
                 <Menu shadow="md" position="bottom-end" width={280}>
                     <Menu.Target>
                         <ActionIcon variant="light" type="button">

@@ -46,6 +46,28 @@ export default function PlaygroundPage() {
     const [selectedRefId, setSelectedRefId] = React.useState<string>(initialRefId);
     const lastPromptIdRef = React.useRef<string>(initialPromptId);
 
+    // Sync to URL
+    React.useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (selectedPromptId) {
+            params.set("promptId", selectedPromptId);
+        } else {
+            params.delete("promptId");
+        }
+
+        if (selectedRefId) {
+            params.set("refId", selectedRefId);
+        } else {
+            params.delete("refId");
+        }
+
+        const newQuery = params.toString();
+        const currentQuery = searchParams.toString();
+        if (newQuery !== currentQuery) {
+            router.replace(`${pathname}?${newQuery}`);
+        }
+    }, [selectedPromptId, selectedRefId, pathname, router, searchParams]);
+
     React.useEffect(() => {
         if (lastPromptIdRef.current && lastPromptIdRef.current !== selectedPromptId) {
             setSelectedRefId("");
@@ -124,7 +146,7 @@ export default function PlaygroundPage() {
     const { data: additionalInputs = [] } = useQuery({
         queryKey:
             selectedPromptId && selectedRefId
-                ? ["prompt-additional-inputs", selectedPromptId, selectedRefId]
+                ? queryKeys.additionalInputs(selectedPromptId, Number(selectedRefId))
                 : [],
         queryFn: () =>
             fetchAdditionalInputs(selectedPromptId, Number(selectedRefId), 0, 100, {

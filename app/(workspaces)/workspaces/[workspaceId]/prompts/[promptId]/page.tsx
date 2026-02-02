@@ -111,6 +111,7 @@ export default function PromptDetailPage() {
     const [diffRightId, setDiffRightId] = React.useState<number | null>(null);
     const [orderedInputs, setOrderedInputs] = React.useState<AdditionalInputItem[]>([]);
     const [currentInstructions, setCurrentInstructions] = React.useState<string>("");
+    const [loadedRefId, setLoadedRefId] = React.useState<number | null>(null);
 
     const { data: prompt, isLoading: promptLoading } = useQuery({
         queryKey: queryKeys.prompt(promptId),
@@ -234,6 +235,7 @@ export default function PromptDetailPage() {
                 // ignore
             }
             setCurrentInstructions(nextInstructions);
+            setLoadedRefId(selectedRef.id);
         }
     }, [selectedRef?.id, selectedRef?.instructions, refEditOpen]);
 
@@ -474,7 +476,7 @@ export default function PromptDetailPage() {
                                 </Button>
                             </div>
                         </Tooltip>
-                        <Tooltip label="Playground 에서 현재 reference 를 테스트합니다." withArrow>
+                        <Tooltip label="지금 입력된 값으로 Playground 에서 테스트합니다." withArrow>
                             <div>
                                 <Button
                                     onClick={() => {
@@ -574,7 +576,7 @@ export default function PromptDetailPage() {
                         <Alert title="Ref 없음" color="yellow">
                             선택된 Ref가 없습니다. 먼저 Ref를 생성해 주세요.
                         </Alert>
-                    ) : selectedIsBranch ? (
+                    ) : selectedIsBranch && loadedRefId === selectedRef.id ? ( // Only render Editor when initialized
                         <PromptEditor
                             key={selectedRef.id}
                             formId="prompt-editor-form"

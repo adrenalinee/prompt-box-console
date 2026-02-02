@@ -413,6 +413,26 @@ export function ExecutePanel({
     };
 
 
+    const handleReset = () => {
+        if (window.confirm("초기 상태로 되돌리시겠습니까? 저장하지 않은 내용은 사라집니다.")) {
+            form.setFieldValue("instructions", refBaselineInstructions);
+            // Also reset inputs to baseline
+            if (refBaselineInputs.length > 0) {
+                form.setFieldValue("inputItems", normalizeInputItems(refBaselineInputs));
+            } else {
+                form.setFieldValue("inputItems", [{ role: "USER", message: "" }]);
+            }
+
+            // Clear session storage override
+            try {
+                if (form.values.promptId && form.values.refId) {
+                    const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
+                    sessionStorage.removeItem(key);
+                }
+            } catch (e) { }
+        }
+    };
+
     return (
         <>
             <form
@@ -533,6 +553,21 @@ export function ExecutePanel({
                                     title: "저장 완료",
                                     message: "수정내역이 저장되었습니다.",
                                 });
+
+                                // Reset dirty state
+                                setRefBaselineInstructions(form.values.instructions);
+                                setRefBaselineInputs(normalizeInputItems(form.values.inputItems));
+
+                                // Clear session storage override
+                                try {
+                                    const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
+                                    sessionStorage.removeItem(key);
+                                } catch (e) { }
+
+                                // Invalidate queries to fetch fresh data
+                                queryClient.invalidateQueries({ queryKey: queryKeys.refs(form.values.promptId) });
+                                queryClient.invalidateQueries({ queryKey: queryKeys.prompt(form.values.promptId) });
+                                queryClient.invalidateQueries({ queryKey: queryKeys.additionalInputs(form.values.promptId, Number(form.values.refId)) });
                             } catch (error) {
                                 if (error && typeof error === "object" && "status" in error) {
                                     return;
@@ -549,6 +584,7 @@ export function ExecutePanel({
                             setCreateRefOpen({ type: "BRANCH" });
                         }}
                         onRequestPromptChange={requestPromptChange}
+                        onReset={handleReset}
                     />
 
                     <Textarea
