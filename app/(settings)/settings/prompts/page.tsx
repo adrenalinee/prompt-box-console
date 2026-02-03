@@ -32,7 +32,7 @@ import {
 } from "@/lib/api/prompts";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function SettingsPromptsPage() {
+function SettingsPromptsContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -334,5 +334,13 @@ export default function SettingsPromptsPage() {
                 </Stack>
             </Modal>
         </Stack>
+    );
+}
+
+export default function SettingsPromptsPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <SettingsPromptsContent />
+        </React.Suspense>
     );
 }

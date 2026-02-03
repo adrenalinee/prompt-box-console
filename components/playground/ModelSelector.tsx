@@ -166,7 +166,7 @@ export function ModelSelector({
                             등록된 API Key가 없습니다. 설정 페이지에서 API Key를 먼저 등록해주세요.
                         </Alert>
                     )}
-                    {modelsError && (
+                    {!!modelsError && (
                         <Alert color="red" title="오류">
                             {getErrorMessage(modelsError)}
                         </Alert>
