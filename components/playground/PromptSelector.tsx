@@ -68,7 +68,7 @@ export function PromptSelector({
 
     const canUseRefActions = !!selectedPromptId && !!selectedRefId;
     const canSaveChanges = canUseRefActions && isModified && selectedRef?.type === "BRANCH";
-    const canCreateTag = canUseRefActions && selectedRef?.type === "BRANCH";
+    const canCreateTag = canUseRefActions && selectedRef?.type === "BRANCH" && !isModified;
     const canCreateBranch = canUseRefActions && (selectedRef?.type === "TAG" || (selectedRef?.type === "BRANCH" && isModified));
 
 
