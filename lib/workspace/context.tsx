@@ -19,7 +19,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
     const { data, isLoading } = useQuery({
         queryKey: queryKeys.workspaces,
-        queryFn: fetchWorkspaces,
+        queryFn: () => fetchWorkspaces(0, 100),
     });
 
     React.useEffect(() => {

@@ -713,6 +713,9 @@ export function ExecutePanel({
                                 title: "생성 완료",
                                 message: "새 프롬프트가 생성되었습니다.",
                             });
+                            queryClient.invalidateQueries({
+                                queryKey: queryKeys.prompts(workspaceId),
+                            });
                             setCreatePromptOpen(false);
                             handleSelectPrompt(result.id);
                         } catch {

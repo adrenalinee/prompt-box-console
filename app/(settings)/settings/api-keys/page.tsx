@@ -33,7 +33,7 @@ import {
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function SettingsApiKeysPage() {
+function SettingsApiKeysContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -451,5 +451,13 @@ export default function SettingsApiKeysPage() {
                 </Stack>
             </Modal>
         </Stack>
+    );
+}
+
+export default function SettingsApiKeysPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <SettingsApiKeysContent />
+        </React.Suspense>
     );
 }

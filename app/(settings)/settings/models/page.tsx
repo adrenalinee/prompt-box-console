@@ -33,7 +33,7 @@ import {
 } from "@/lib/api/settings";
 import { queryKeys } from "@/lib/query/keys";
 
-export default function SettingsModelsPage() {
+function SettingsModelsContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -367,7 +367,7 @@ export default function SettingsModelsPage() {
                         mutation.mutate({
                             name: values.name,
                             modelKey: values.modelKey,
-                            modelType: values.modelType,
+                            modelType: (values.modelType as "STANDARD" | "REASONING"),
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -424,7 +424,7 @@ export default function SettingsModelsPage() {
                             vendorId: values.vendorId || undefined,
                             name: values.name || undefined,
                             modelKey: values.modelKey || undefined,
-                            modelType: values.modelType || undefined,
+                            modelType: (values.modelType as "STANDARD" | "REASONING") || undefined,
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -502,5 +502,13 @@ export default function SettingsModelsPage() {
                 </Stack>
             </Modal>
         </Stack>
+    );
+}
+
+export default function SettingsModelsPage() {
+    return (
+        <React.Suspense fallback={<Loader />}>
+            <SettingsModelsContent />
+        </React.Suspense>
     );
 }
