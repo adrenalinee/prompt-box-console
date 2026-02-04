@@ -1,4 +1,5 @@
 import { showNotification } from "@mantine/notifications";
+import {getInitServerPhase} from "@/config/app-config";
 
 export type ApiError = {
     status: number;
@@ -14,8 +15,21 @@ export type PageResponse<T> = {
     totalPages: number;
 };
 
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+// const API_BASE_URL =
+//     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+
+function getApiBaseUrl() {
+    const serverPhase = getInitServerPhase();
+    if (serverPhase == 'dev') {
+        return "asia-northeast3-docker.pkg.dev/rock-extension-484507-t6/mystix-ai/prompt-box-server@sha256:782ad203c4335295eb27c2c10268f4aa512ced8864ea921abc5e4c5e323bbe3d";
+    } else if (serverPhase == 'local') {
+        return "http://localhost:8080"
+    } else {
+        throw Error("정의되지 않은 serverPhase 입니다. serverPhase: " + serverPhase);
+    }
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 async function parseJsonSafe(response: Response) {
     const contentType = response.headers.get("content-type") || "";
