@@ -20,6 +20,7 @@ export type PageResponse<T> = {
 
 function getApiBaseUrl() {
     const serverPhase = getInitServerPhase();
+    console.log("serverPhase: " + serverPhase);
     if (serverPhase == 'dev') {
         return "https://prompt-box-server-dev-245695755093.asia-northeast3.run.app";
     } else if (serverPhase == 'local') {
