@@ -21,7 +21,7 @@ export type PageResponse<T> = {
 function getApiBaseUrl() {
     const serverPhase = getInitServerPhase();
     if (serverPhase == 'dev') {
-        return "asia-northeast3-docker.pkg.dev/rock-extension-484507-t6/mystix-ai/prompt-box-server@sha256:782ad203c4335295eb27c2c10268f4aa512ced8864ea921abc5e4c5e323bbe3d";
+        return "https://prompt-box-server-dev-245695755093.asia-northeast3.run.app";
     } else if (serverPhase == 'local') {
         return "http://localhost:8080"
     } else {
