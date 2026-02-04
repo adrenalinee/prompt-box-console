@@ -4,7 +4,7 @@ import React from "react";
 import {
     ActionIcon,
     Alert,
-    Button,
+    Button, Collapse,
     Group,
     Menu,
     Modal,
@@ -13,11 +13,11 @@ import {
     Stack,
     Text,
     Textarea,
-    TextInput,
+    TextInput, UnstyledButton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
-    IconAdjustments,
+    IconAdjustments, IconChevronDown, IconChevronRight,
     IconDotsVertical,
 } from "@tabler/icons-react";
 import type { AdditionalInputItem, Prompt, PromptRef } from "@/lib/api/prompts";
@@ -37,27 +37,13 @@ import { queryKeys } from "@/lib/query/keys";
 import { ModelSelector } from "./ModelSelector";
 import { PromptSelector } from "./PromptSelector";
 
-type InputItemForm = {
-    role: "USER" | "ASSISTANT" | "SYSTEM" | "DEVELOPER";
-    message: string;
-};
+import type { ExecuteFormValues, InputItemForm } from "./types";
+import { useExecuteForm } from "./useExecuteForm";
+import {useDisclosure} from "@mantine/hooks";
 
-export type ExecuteFormValues = {
-    promptId: string;
-    refId: string;
-    instructions: string;
-    modelId: string;
-    apiKeyId: string;
-    inputItems: InputItemForm[];
-    overrideOptions: {
-        temperature: number | null;
-        topP: number | null;
-        maxTokens: number | null;
-        textFormat: string;
-        effort: string;
-        verbosity: string;
-        summary: string;
-    };
+
+export type ExecutePanelRef = {
+    getValues: () => ExecuteFormValues;
 };
 
 type ExecutePanelProps = {
@@ -105,7 +91,7 @@ type ExecutePanelProps = {
     }) => void;
 };
 
-export function ExecutePanel({
+export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>(({
     workspaceId,
     prompts,
     promptsError,
@@ -132,7 +118,7 @@ export function ExecutePanel({
     workspaceDefaultModelId,
     onExecute,
     initialOverrideInstructions, // Added destructuring
-}: ExecutePanelProps) {
+}, ref) => {
     const queryClient = useQueryClient();
     const promptChangeRef = React.useRef<{ id: string; name?: string } | null>(null);
     const [confirmPromptChangeOpen, setConfirmPromptChangeOpen] = React.useState(false);
@@ -143,69 +129,36 @@ export function ExecutePanel({
     const [missingModelOpen, setMissingModelOpen] = React.useState(false);
     const [missingInputOpen, setMissingInputOpen] = React.useState(false);
     const [optionsModalOpen, setOptionsModalOpen] = React.useState(false);
-    const [refBaselineInstructions, setRefBaselineInstructions] = React.useState("");
-    const [refBaselineInputs, setRefBaselineInputs] = React.useState<InputItemForm[]>([]);
 
-    // Track override consumption
-    const overrideConsumedRef = React.useRef(false);
-    const lastRefIdRef = React.useRef<string | null>(null);
+    const [instructionsOpen, { toggle: toggleInstructions }] = useDisclosure(true);
+    const [inputItemsOpen, { toggle: toggleInputItems }] = useDisclosure(true);
 
-    const form = useForm<ExecuteFormValues>({
-        initialValues: {
-            promptId: selectedPromptId ?? "",
-            refId: selectedRefId ?? "",
-            instructions: "",
-            modelId: selectedModelId ?? "",
-            apiKeyId: selectedApiKeyId ?? "",
-            inputItems: [{ role: "USER", message: "" }],
-            overrideOptions: {
-                temperature: null,
-                topP: null,
-                maxTokens: null,
-                textFormat: "",
-                effort: "",
-                verbosity: "",
-                summary: "",
-            },
-        },
+    const {
+        form,
+        normalizeInputItems,
+        updateInputMessage,
+        effectiveInputItems,
+        hasPromptContent,
+        isModified,
+        hasInvalidInputItems,
+        refBaselineInstructions,
+        refBaselineInputs,
+        setRefBaselineInstructions,
+        setRefBaselineInputs,
+    } = useExecuteForm({
+        initialPromptId: selectedPromptId,
+        initialRefId: selectedRefId,
+        initialModelId: selectedModelId,
+        initialApiKeyId: selectedApiKeyId,
+        initialOverrideInstructions,
+        refs,
+        defaultOptions,
+        additionalInputs,
     });
 
-    const normalizeInputItems = React.useCallback((items: InputItemForm[]) => {
-        let next = items.map((item) => ({ ...item }));
-        if (next.length === 0) {
-            next = [{ role: "USER", message: "" }];
-        }
-        while (next.length > 1) {
-            const last = next[next.length - 1];
-            const prev = next[next.length - 2];
-            if (last.message.trim() === "" && prev.message.trim() === "") {
-                next.pop();
-            } else {
-                break;
-            }
-        }
-        const last = next[next.length - 1];
-        if (last.message.trim() !== "") {
-            next.push({ role: "USER", message: "" });
-        }
-        return next;
-    }, []);
-
-    const updateInputMessage = React.useCallback(
-        (index: number, value: string) => {
-            const items = form.values.inputItems.map((item, idx) =>
-                idx === index ? { ...item, message: value } : item,
-            );
-            if (index === items.length - 1 && value.trim().length > 0) {
-                items.push({ role: "USER", message: "" });
-            }
-            if (index === items.length - 2 && value.trim().length === 0) {
-                items.splice(index, 1);
-            }
-            form.setFieldValue("inputItems", normalizeInputItems(items));
-        },
-        [form, normalizeInputItems],
-    );
+    React.useImperativeHandle(ref, () => ({
+        getValues: () => form.values,
+    }));
 
     const promptForm = useForm({
         initialValues: {
@@ -228,124 +181,6 @@ export function ExecutePanel({
         },
     });
 
-    // Sync external props to form state
-    // IMPORTANT: Dependencies are critical here. We only want to update if valid props change.
-    React.useEffect(() => {
-        if (selectedPromptId !== undefined) form.setFieldValue("promptId", selectedPromptId);
-    }, [selectedPromptId]);
-
-    React.useEffect(() => {
-        if (selectedRefId !== undefined) form.setFieldValue("refId", selectedRefId);
-    }, [selectedRefId]);
-
-    React.useEffect(() => {
-        if (selectedModelId !== undefined) form.setFieldValue("modelId", selectedModelId);
-    }, [selectedModelId]);
-
-    React.useEffect(() => {
-        if (selectedApiKeyId !== undefined) form.setFieldValue("apiKeyId", selectedApiKeyId);
-    }, [selectedApiKeyId]);
-
-
-    const safeRefs = Array.isArray(refs) ? refs : [];
-    const selectedRef = safeRefs.find((ref) => String(ref.id) === form.values.refId);
-
-    // Sync instructions when Ref changes
-    React.useEffect(() => {
-        if (!selectedRef) {
-            if (!form.values.promptId) {
-                setRefBaselineInstructions("");
-                form.setFieldValue("instructions", "");
-                setRefBaselineInputs([]);
-                lastRefIdRef.current = null;
-            }
-            return;
-        }
-
-        const serverInstructions = selectedRef.instructions ?? "";
-        const currentRefId = String(selectedRef.id);
-        const refChanged = lastRefIdRef.current !== currentRefId;
-
-        // Apply override if available and not yet consumed
-        if (initialOverrideInstructions !== undefined && !overrideConsumedRef.current) {
-            form.setFieldValue("instructions", initialOverrideInstructions);
-            setRefBaselineInstructions(serverInstructions);
-            overrideConsumedRef.current = true;
-            lastRefIdRef.current = currentRefId;
-            return;
-        }
-
-        // Standard Sync Logic
-        // If Ref changed, always update.
-        if (refChanged) {
-            form.setFieldValue("instructions", serverInstructions);
-        } else {
-            // Ref updated (same ID). Only update if user hasn't modified it (dirty check).
-            // Using loose equality for safety, or strict.
-            if (form.values.instructions === refBaselineInstructions) {
-                form.setFieldValue("instructions", serverInstructions);
-            }
-        }
-
-        setRefBaselineInstructions(serverInstructions);
-        lastRefIdRef.current = currentRefId;
-    }, [selectedRef?.id, selectedRef?.instructions, initialOverrideInstructions]);
-
-    // Sync additional Inputs when Ref changes
-    React.useEffect(() => {
-        if (!selectedRefId) return;
-        if (additionalInputs && additionalInputs.length > 0) {
-            const nextItems: InputItemForm[] = additionalInputs.map((item) => ({
-                role: item.role as InputItemForm["role"],
-                message: item.message,
-            }));
-            form.setFieldValue("inputItems", normalizeInputItems(nextItems));
-            setRefBaselineInputs(nextItems);
-        } else {
-            const defaultItems: InputItemForm[] = [{ role: "USER", message: "" }];
-            form.setFieldValue("inputItems", normalizeInputItems(defaultItems));
-            setRefBaselineInputs([]);
-        }
-    }, [selectedRefId, additionalInputs, normalizeInputItems]);
-
-    // Input normalization effect
-    React.useEffect(() => {
-        const normalized = normalizeInputItems(form.values.inputItems);
-        const current = form.values.inputItems;
-        const isSame =
-            normalized.length === current.length &&
-            normalized.every(
-                (item, index) =>
-                    item.message === current[index]?.message &&
-                    item.role === current[index]?.role,
-            );
-        if (!isSame) {
-            form.setFieldValue("inputItems", normalized);
-        }
-    }, [form.values.inputItems, normalizeInputItems, form]);
-
-    // Default Options logic
-    React.useEffect(() => {
-        if (!defaultOptions && form.values.overrideOptions.temperature !== null) return;
-        const fallback = {
-            temperature: 1,
-            topP: 0,
-            maxTokens: 3000,
-            textFormat: "",
-            effort: "LOW",
-            verbosity: "LOW",
-            summary: "AUTO",
-        };
-        form.setFieldValue("overrideOptions.temperature", defaultOptions?.temperature ?? fallback.temperature);
-        form.setFieldValue("overrideOptions.topP", defaultOptions?.topP ?? fallback.topP);
-        form.setFieldValue("overrideOptions.maxTokens", defaultOptions?.maxTokens ?? fallback.maxTokens);
-        form.setFieldValue("overrideOptions.textFormat", defaultOptions?.textFormat ?? fallback.textFormat);
-        form.setFieldValue("overrideOptions.effort", defaultOptions?.effort ?? fallback.effort);
-        form.setFieldValue("overrideOptions.verbosity", defaultOptions?.verbosity ?? fallback.verbosity);
-        form.setFieldValue("overrideOptions.summary", defaultOptions?.summary ?? fallback.summary);
-    }, [defaultOptions]);
-
-
     const optionSummary = [
         { label: "temperature", value: form.values.overrideOptions.temperature ?? "-" },
         { label: "topP", value: form.values.overrideOptions.topP ?? "-" },
@@ -355,30 +190,6 @@ export function ExecutePanel({
         { label: "verbosity", value: form.values.overrideOptions.verbosity || "-" },
         { label: "summary", value: form.values.overrideOptions.summary || "-" },
     ];
-
-
-    const effectiveInputItems = React.useMemo(
-        () => form.values.inputItems.filter((item) => item.message.trim().length > 0),
-        [form.values.inputItems],
-    );
-    const hasPromptContent =
-        form.values.instructions.trim().length > 0 || effectiveInputItems.length > 0;
-
-    // Calculate effective baseline inputs (remove empty items) for comparison
-    const effectiveBaselineInputs = React.useMemo(
-        () => refBaselineInputs.filter((item) => item.message.trim().length > 0),
-        [refBaselineInputs]
-    );
-
-    const isModified =
-        !!form.values.promptId &&
-        !!form.values.refId &&
-        (form.values.instructions.trim() !== refBaselineInstructions.trim() ||
-            JSON.stringify(effectiveInputItems) !== JSON.stringify(effectiveBaselineInputs));
-
-    const hasInvalidInputItems = form.values.inputItems
-        .slice(0, -1)
-        .some((item) => item.message.trim().length === 0);
 
 
     // Action Handlers
@@ -594,64 +405,90 @@ export function ExecutePanel({
                         onReset={handleReset}
                     />
 
-                    <Textarea
-                        label="Instructions"
-                        minRows={6}
-                        autosize
-                        {...form.getInputProps("instructions")}
-                    />
+                    {/*<Textarea*/}
+                    {/*    label="Instructions"*/}
+                    {/*    minRows={6}*/}
+                    {/*    autosize*/}
+                    {/*    {...form.getInputProps("instructions")}*/}
+                    {/*/>*/}
+                    <Stack gap="xs">
+                        <UnstyledButton onClick={toggleInstructions}>
+                            <Group gap="xs">
+                                {instructionsOpen ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                                <Text fw={600} size="sm">Instructions</Text>
+                            </Group>
+                        </UnstyledButton>
+                        <Collapse in={instructionsOpen}>
+                            <Textarea
+                                minRows={6}
+                                autosize
+                                placeholder="Instructions..."
+                                {...form.getInputProps("instructions")}
+                            />
+                        </Collapse>
+                    </Stack>
 
                     <Stack gap="xs">
-                        <Text fw={600}>Input Items</Text>
-                        {hasInvalidInputItems && (
-                            <Alert color="yellow" variant="light">
-                                message가 비어 있으면 안됩니다. 필요없는 input item이라면 삭제해주세요.
-                            </Alert>
-                        )}
-                        {form.values.inputItems.map((item, index) => (
-                            <Paper key={`input-${index}`} withBorder p="sm">
-                                <Group justify="space-between" align="center">
-                                    <Select
-                                        label="Role"
-                                        data={[
-                                            { value: "USER", label: "USER" },
-                                            { value: "ASSISTANT", label: "ASSISTANT" },
-                                            { value: "SYSTEM", label: "SYSTEM" },
-                                            { value: "DEVELOPER", label: "DEVELOPER" },
-                                        ]}
-                                        w={160}
-                                        {...form.getInputProps(`inputItems.${index}.role`)}
-                                    />
-                                    <Menu shadow="md" position="bottom-end">
-                                        <Menu.Target>
-                                            <ActionIcon variant="light" type="button">
-                                                <IconDotsVertical size={16} />
-                                            </ActionIcon>
-                                        </Menu.Target>
-                                        <Menu.Dropdown>
-                                            <Menu.Item
-                                                color="red"
-                                                disabled={form.values.inputItems.length === 1}
-                                                onClick={() => form.removeListItem("inputItems", index)}
-                                                component="button"
-                                                type="button"
-                                            >
-                                                삭제
-                                            </Menu.Item>
-                                        </Menu.Dropdown>
-                                    </Menu>
-                                </Group>
-                                <Textarea
-                                    label="Message"
-                                    minRows={3}
-                                    autosize
-                                    value={item.message}
-                                    onChange={(event) =>
-                                        updateInputMessage(index, event.currentTarget.value)
-                                    }
-                                />
-                            </Paper>
-                        ))}
+                        <UnstyledButton onClick={toggleInputItems}>
+                            <Group gap="xs">
+                                {inputItemsOpen ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
+                                <Text fw={600}>Input Items</Text>
+                            </Group>
+                        </UnstyledButton>
+                        <Collapse in={inputItemsOpen}>
+                            <Stack gap="xs">
+                                {/*<Text fw={600}>Input Items</Text>*/}
+                                {hasInvalidInputItems && (
+                                    <Alert color="yellow" variant="light">
+                                        message가 비어 있으면 안됩니다. 필요없는 input item이라면 삭제해주세요.
+                                    </Alert>
+                                )}
+                                {form.values.inputItems.map((item, index) => (
+                                    <Paper key={`input-${index}`} withBorder p="sm">
+                                        <Group justify="space-between" align="center">
+                                            <Select
+                                                label="Role"
+                                                data={[
+                                                    { value: "USER", label: "USER" },
+                                                    { value: "ASSISTANT", label: "ASSISTANT" },
+                                                    { value: "SYSTEM", label: "SYSTEM" },
+                                                    { value: "DEVELOPER", label: "DEVELOPER" },
+                                                ]}
+                                                w={160}
+                                                {...form.getInputProps(`inputItems.${index}.role`)}
+                                            />
+                                            <Menu shadow="md" position="bottom-end">
+                                                <Menu.Target>
+                                                    <ActionIcon variant="light" type="button">
+                                                        <IconDotsVertical size={16} />
+                                                    </ActionIcon>
+                                                </Menu.Target>
+                                                <Menu.Dropdown>
+                                                    <Menu.Item
+                                                        color="red"
+                                                        disabled={form.values.inputItems.length === 1}
+                                                        onClick={() => form.removeListItem("inputItems", index)}
+                                                        component="button"
+                                                        type="button"
+                                                    >
+                                                        삭제
+                                                    </Menu.Item>
+                                                </Menu.Dropdown>
+                                            </Menu>
+                                        </Group>
+                                        <Textarea
+                                            label="Message"
+                                            minRows={3}
+                                            autosize
+                                            value={item.message}
+                                            onChange={(event) =>
+                                                updateInputMessage(index, event.currentTarget.value)
+                                            }
+                                        />
+                                    </Paper>
+                                ))}
+                            </Stack>
+                        </Collapse>
                     </Stack>
                 </Stack>
             </form>
@@ -893,4 +730,4 @@ export function ExecutePanel({
 
         </>
     );
-}
+});

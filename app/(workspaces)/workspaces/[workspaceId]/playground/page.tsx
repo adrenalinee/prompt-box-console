@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button, Grid, Group, Loader, Stack, Text } from "@mantine/core";
+import {Button, Divider, Grid, Group, Loader, Stack, Text} from "@mantine/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSearchParams, useParams, usePathname, useRouter } from "next/navigation";
 import { IconArrowsDiff, IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
@@ -9,7 +9,7 @@ import { fetchAdditionalInputs, fetchPrompt, fetchPrompts, fetchRefs } from "@/l
 import { fetchWorkspaceApiKeys, fetchWorkspaceModels, fetchVendors } from "@/lib/api/settings";
 import { executeCallStream, fetchLog, LlmStreamEvent, cancelCall } from "@/lib/api/llmCalls";
 import { queryKeys } from "@/lib/query/keys";
-import { ExecutePanel } from "@/components/playground/ExecutePanel";
+import { ExecutePanel, type ExecutePanelRef } from "@/components/playground/ExecutePanel";
 import { OutputPanel, type OutputBlock } from "@/components/playground/OutputPanel";
 import { fetchDefaultOptions, fetchWorkspace } from "@/lib/api/workspaces";
 
@@ -45,6 +45,7 @@ export default function PlaygroundPage() {
     const [selectedPromptId, setSelectedPromptId] = React.useState<string>(initialPromptId);
     const [selectedRefId, setSelectedRefId] = React.useState<string>(initialRefId);
     const lastPromptIdRef = React.useRef<string>(initialPromptId);
+    const executePanelRef = React.useRef<ExecutePanelRef>(null);
 
     // Sync to URL
     React.useEffect(() => {
@@ -586,14 +587,33 @@ export default function PlaygroundPage() {
                         </Button>
                     )}
                 </Group>
-                <Button variant="default" leftSection={<IconArrowsDiff size={16} />} disabled>
+                <Button
+                    variant="light"
+                    leftSection={<IconArrowsDiff size={16} />}
+                    onClick={() => {
+                        if (executePanelRef.current) {
+                            const values = executePanelRef.current.getValues();
+                            const state = {
+                                initialPromptId: values.promptId,
+                                initialRefId: values.refId,
+                                initialModelId: values.modelId,
+                                initialApiKeyId: values.apiKeyId,
+                                initialOverrideInstructions: values.instructions,
+                                initialInputItems: values.inputItems,
+                            };
+                            sessionStorage.setItem("compare_init_state", JSON.stringify(state));
+                            router.push(`/workspaces/${workspaceId}/playground/compare`);
+                        }
+                    }}
+                >
                     비교
                 </Button>
             </Group>
-
+            <Divider />
             <Grid>
                 <Grid.Col span={{ base: 12, md: 6 }}>
                     <ExecutePanel
+                        ref={executePanelRef}
                         workspaceId={workspaceId}
                         prompts={prompts}
                         promptsError={promptsError ? promptsErrorDetail : undefined}
