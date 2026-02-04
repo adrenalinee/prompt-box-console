@@ -8,6 +8,7 @@ import { IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
+import {getInitServerPhase} from "@/config/app-config";
 
 export default function RootPage() {
     const router = useRouter();
@@ -36,14 +37,19 @@ export default function RootPage() {
         <AppShell header={{ height: 60 }} padding="md">
             <AppShell.Header>
                 <Group h="100%" px="md" justify="space-between">
-                <Text fw={700}>PromptBox</Text>
-                    <ActionIcon component={Link} href="/settings" variant="light">
-                        <IconSettings size={18} />
-                    </ActionIcon>
+                    <Text fw={700}>PromptBox</Text>
+
+                    <Group>
+                        <Text c="gray">ServerPhase: {getInitServerPhase()}</Text>
+                        <ActionIcon component={Link} href="/settings" variant="light">
+                            <IconSettings size={18} />
+                        </ActionIcon>
+                    </Group>
                 </Group>
             </AppShell.Header>
             <AppShell.Main>
                 <Stack align="center" justify="center" h="80vh">
+                    {/*<Text c="gray">ServerPhase: {getInitServerPhase()}</Text>*/}
                     <Text fw={700} size="xl">
                         Workspace 선택
                     </Text>
