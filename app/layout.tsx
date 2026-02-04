@@ -21,10 +21,16 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const serverPhase = process.env.SERVER_PHASE ?? "local";
     return (
         <html lang="ko" {...mantineHtmlProps}>
         <head>
             <ColorSchemeScript />
+            <script
+                dangerouslySetInnerHTML={{
+                    __html: `window.__SERVER_PHASE__=${JSON.stringify(serverPhase)};`,
+                }}
+            />
         </head>
         <body className="antialiased">
         <Providers>{children}</Providers>

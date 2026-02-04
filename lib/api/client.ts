@@ -30,7 +30,7 @@ function getApiBaseUrl() {
     }
 }
 
-const API_BASE_URL = getApiBaseUrl()
+const API_BASE_URL = await getApiBaseUrl()
 
 async function parseJsonSafe(response: Response) {
     const contentType = response.headers.get("content-type") || "";
