@@ -1,6 +1,6 @@
 import { showNotification } from "@mantine/notifications";
 import { getInitServerPhase } from "@/config/app-config";
-import { getSession } from "next-auth/react";
+import { getSession, signOut } from "next-auth/react";
 
 export type ApiError = {
     status: number;
@@ -99,6 +99,15 @@ export async function apiFetch<T>(
             code: body?.code,
             message: body?.message || response.statusText || "요청에 실패했습니다.",
         };
+
+        if (response.status === 401) {
+            if (typeof window !== "undefined") {
+                // 401 Unauthorized: Token expired or invalid. Force sign out.
+                signOut({ callbackUrl: "/login" });
+                // Stop processing
+                throw error;
+            }
+        }
 
         if (typeof window !== "undefined" && !config.suppressNotification) {
             showNotification({
