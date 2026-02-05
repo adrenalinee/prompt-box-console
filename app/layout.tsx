@@ -16,19 +16,29 @@ export const metadata: Metadata = {
     description: "PromptBox",
 };
 
-export default function RootLayout({
-   children,
+import { auth } from "@/auth";
+
+export default async function RootLayout({
+    children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const serverPhase = process.env.SERVER_PHASE ?? "local";
+    const session = await auth();
+
     return (
         <html lang="ko" {...mantineHtmlProps}>
-        <head>
-            <ColorSchemeScript />
-        </head>
-        <body className="antialiased">
-        <Providers>{children}</Providers>
-        </body>
+            <head>
+                <ColorSchemeScript />
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `window.__SERVER_PHASE__=${JSON.stringify(serverPhase)};`,
+                    }}
+                />
+            </head>
+            <body className="antialiased">
+                <Providers session={session}>{children}</Providers>
+            </body>
         </html>
     );
 }

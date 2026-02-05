@@ -5,6 +5,8 @@ import { AppShell, Group, Text, Burger, Box } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { SettingsNav } from "@/components/layout/SettingsNav";
 import Link from "next/link";
+import { UserProfileMenu } from "@/components/auth/UserProfileMenu";
+import ServerPhase from "@/components/layout/ServerPhase";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
     const [opened, { toggle }] = useDisclosure();
@@ -29,6 +31,10 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                         <Text fw={600} c="dimmed">
                             Settings
                         </Text>
+                    </Group>
+                    <Group>
+                        <ServerPhase />
+                        <UserProfileMenu />
                     </Group>
                 </Group>
             </AppShell.Header>
