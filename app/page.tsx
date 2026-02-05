@@ -8,7 +8,8 @@ import { IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
-import {getInitServerPhase} from "@/config/app-config";
+import { getInitServerPhase } from "@/config/app-config";
+import { UserProfileMenu } from "@/components/auth/UserProfileMenu";
 
 export default function RootPage() {
     const router = useRouter();
@@ -41,9 +42,7 @@ export default function RootPage() {
 
                     <Group>
                         <Text c="gray">ServerPhase: {getInitServerPhase()}</Text>
-                        <ActionIcon component={Link} href="/settings" variant="light">
-                            <IconSettings size={18} />
-                        </ActionIcon>
+                        <UserProfileMenu />
                     </Group>
                 </Group>
             </AppShell.Header>
