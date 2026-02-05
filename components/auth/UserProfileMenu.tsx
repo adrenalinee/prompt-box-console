@@ -10,7 +10,11 @@ export function UserProfileMenu() {
     const { data: session } = useSession();
 
     if (!session?.user) {
-        return null;
+        return (
+            <UnstyledButton style={{ cursor: "default" }}>
+                <Avatar radius="xl" size="md" color="gray" />
+            </UnstyledButton>
+        );
     }
 
     const { name, email, image } = session.user;

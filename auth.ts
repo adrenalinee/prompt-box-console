@@ -18,7 +18,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }),
     ],
     callbacks: {
-        authorized({ auth }) {
+        authorized({ auth, request: { nextUrl } }) {
+            // 메인 페이지("/")는 로그인 없이 접근 허용
+            if (nextUrl.pathname === "/") {
+                return true;
+            }
             return !!auth?.user
         },
         async signIn({ user, account, profile }) {
