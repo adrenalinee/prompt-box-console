@@ -1,5 +1,6 @@
 import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 import { showNotification } from "@mantine/notifications";
+import { getSession } from "next-auth/react";
 
 const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
@@ -196,12 +197,22 @@ export async function executeCallStream(
     const { workspaceId, ...body } = payload;
     let response: Response;
     try {
+        const session = await getSession();
+        // eslint-disable-next-line
+        const token = (session as any)?.sessionToken;
+
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+        };
+
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
         response = await fetch(`${API_BASE_URL}/workspaces/${workspaceId}/llm-calls`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "text/event-stream",
-            },
+            headers,
             body: JSON.stringify(body),
             signal,
         });

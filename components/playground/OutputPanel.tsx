@@ -64,6 +64,28 @@ export function OutputPanel({
     // But since blocks change dynamically, controlled accordion might be tricky or jerky.
     // Uncontrolled with defaultValue is safer for streaming updates if keys are stable.
 
+    const [openItems, setOpenItems] = React.useState<string[]>([]);
+
+    React.useEffect(() => {
+        // When blocks change (e.g. new item added), add it to openItems if not present
+        // But only if it's a new addition.
+        // Simple strategy: Just ensure all current block IDs are in openItems whenever blocks length increases.
+        // Actually, we should probably keep all open by default.
+        setOpenItems((prev) => {
+            const allIds = blocks.map((b) => String(b.index));
+            // Add any missing IDs (newly appeared)
+            const missing = allIds.filter(id => !prev.includes(id));
+            if (missing.length > 0) {
+                return [...prev, ...missing];
+            }
+            return prev;
+        });
+    }, [blocks.length]); // Only run when count changes to avoid fighting user closing it?
+    // Wait, if I collapse an item, blocks length doesn't change, so it stays collapsed.
+    // If a NEW item arrives, it gets added. Current items stay as is.
+    // However, if the component remounts or blocks are reset, we might want to reset?
+    // Let's explicitly depend on blocks.length.
+
     return (
         <Paper p="md" withBorder>
             <Stack>
@@ -106,7 +128,8 @@ export function OutputPanel({
                         variant="separated"
                         radius="md"
                         multiple
-                        defaultValue={blocks.map((b) => String(b.index))}
+                        value={openItems}
+                        onChange={setOpenItems}
                     >
                         {blocks.map((block) => {
                             // Filter valid parts

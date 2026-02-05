@@ -355,6 +355,9 @@ export default function ApiKeysPage() {
             </Modal>
 
             <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="API Key 등록">
+                <Alert>
+                    새로운 api key 정보를 등록합니다, api key 값은 암호화되어 저장됩니다.
+                </Alert>
                 <form
                     onSubmit={form.onSubmit((values) => {
                         createMutation.mutate(values);
@@ -380,6 +383,9 @@ export default function ApiKeysPage() {
             </Modal>
 
             <Modal opened={!!editing} onClose={() => setEditing(null)} title="API Key 수정">
+                <Alert>
+                    api key 정보를 수정합니다, api key 값은 암호화되어 저장됩니다.
+                </Alert>
                 <form
                     onSubmit={editForm.onSubmit((values) => {
                         updateMutation.mutate({
