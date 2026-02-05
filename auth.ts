@@ -19,6 +19,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     ],
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
+            console.log(process.env.AUTH_GOOGLE_SECRET)
+
             // 메인 페이지("/")는 로그인 없이 접근 허용
             if (nextUrl.pathname === "/") {
                 return true;

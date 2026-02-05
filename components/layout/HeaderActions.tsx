@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { Group, Button, Tooltip, ActionIcon } from "@mantine/core";
-import Link from "next/link";
-import { IconPlus, IconSettings } from "@tabler/icons-react";
-import { UserProfileMenu } from "@/components/auth/UserProfileMenu";
+import {Group} from "@mantine/core";
+import {UserProfileMenu} from "@/components/auth/UserProfileMenu";
+import ServerPhase from "@/components/layout/ServerPhase";
 
 type HeaderActionsProps = {
     workspaceId: string;
@@ -13,6 +12,7 @@ type HeaderActionsProps = {
 export function HeaderActions({ workspaceId }: HeaderActionsProps) {
     return (
         <Group gap="xs">
+            <ServerPhase />
             <UserProfileMenu />
         </Group>
     );

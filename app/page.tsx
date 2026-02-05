@@ -1,16 +1,15 @@
 "use client";
 
 import React from "react";
-import { ActionIcon, Alert, AppShell, Button, Center, Group, Loader, Select, Stack, Text } from "@mantine/core";
-import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { IconSettings } from "@tabler/icons-react";
+import {Alert, AppShell, Button, Center, Group, Loader, Select, Stack, Text} from "@mantine/core";
+import {useQuery} from "@tanstack/react-query";
+import {useRouter} from "next/navigation";
 import Link from "next/link";
-import { fetchWorkspaces } from "@/lib/api/workspaces";
-import { queryKeys } from "@/lib/query/keys";
-import { getInitServerPhase } from "@/config/app-config";
-import { UserProfileMenu } from "@/components/auth/UserProfileMenu";
-import { useSession } from "next-auth/react";
+import {fetchWorkspaces} from "@/lib/api/workspaces";
+import {queryKeys} from "@/lib/query/keys";
+import {UserProfileMenu} from "@/components/auth/UserProfileMenu";
+import {useSession} from "next-auth/react";
+import ServerPhase from "@/components/layout/ServerPhase";
 
 export default function RootPage() {
     const router = useRouter();
@@ -52,16 +51,15 @@ export default function RootPage() {
             <AppShell.Header>
                 <Group h="100%" px="md" justify="space-between">
                     <Text fw={700}>PromptBox</Text>
-
                     <Group>
-                        <Text c="gray">ServerPhase: {getInitServerPhase()}</Text>
+                        <ServerPhase />
                         <UserProfileMenu />
                     </Group>
                 </Group>
             </AppShell.Header>
             <AppShell.Main>
                 <Stack align="center" justify="center" h="80vh">
-                    {!isAuthenticated ? (
+                    {!session?.user ? (
                         <>
                             <Text fw={700} size="xl">
                                 로그인이 필요합니다

@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, Group, Menu, Text, UnstyledButton, rem } from "@mantine/core";
+import {Avatar, Group, Menu, Text, UnstyledButton, rem, Tooltip} from "@mantine/core";
 import { IconLogout, IconSettings } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -11,9 +11,11 @@ export function UserProfileMenu() {
 
     if (!session?.user) {
         return (
-            <UnstyledButton style={{ cursor: "default" }}>
-                <Avatar radius="xl" size="md" color="gray" />
-            </UnstyledButton>
+            <Tooltip label="로그인 하세요.">
+                <UnstyledButton style={{ cursor: "default" }}>
+                    <Avatar radius="xl" size="md" color="gray" />
+                </UnstyledButton>
+            </Tooltip>
         );
     }
 
@@ -56,7 +58,7 @@ export function UserProfileMenu() {
                 <Menu.Item
                     color="red"
                     leftSection={<IconLogout style={{ width: rem(16), height: rem(16) }} />}
-                    onClick={() => signOut({ callbackUrl: "/login" })}
+                    onClick={() => signOut({ redirectTo: "/" })}
                 >
                     Logout
                 </Menu.Item>
