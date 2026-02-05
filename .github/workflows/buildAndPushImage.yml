@@ -47,9 +47,14 @@ jobs:
           BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-10)
           BUILD_TAG="${BRANCH_NAME}-${SHORT_SHA}"
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           echo "Generated BUILD_TAG: ${BUILD_TAG}"
+          echo "Generated BUILD_DATE: ${BUILD_DATE}"
           
-          docker build -t ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${BUILD_TAG} .
+          docker build \
+            --build-arg BUILD_TAG="${BUILD_TAG}" \
+            --build-arg BUILD_DATE="${BUILD_DATE}" \
+            -t ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${BUILD_TAG} .
           docker push ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${BUILD_TAG}
           
           docker tag ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${BUILD_TAG} ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:latest
