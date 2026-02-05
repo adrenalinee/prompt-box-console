@@ -1,6 +1,6 @@
 "use client";
 
-import {Avatar, Group, Menu, Text, UnstyledButton, rem, Tooltip} from "@mantine/core";
+import { Avatar, Group, Menu, Text, UnstyledButton, rem, Tooltip } from "@mantine/core";
 import { IconLogout, IconSettings } from "@tabler/icons-react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
@@ -62,6 +62,24 @@ export function UserProfileMenu() {
                 >
                     Logout
                 </Menu.Item>
+
+                {(process.env.NEXT_PUBLIC_BUILD_TAG || process.env.NEXT_PUBLIC_BUILD_DATE) && (
+                    <>
+                        <Menu.Divider />
+                        <div style={{ padding: "4px 12px", opacity: 0.5 }}>
+                            {process.env.NEXT_PUBLIC_BUILD_TAG && (
+                                <Text size="xs" c="dimmed">
+                                    Version: {process.env.NEXT_PUBLIC_BUILD_TAG}
+                                </Text>
+                            )}
+                            {process.env.NEXT_PUBLIC_BUILD_DATE && (
+                                <Text size="xs" c="dimmed">
+                                    Built: {process.env.NEXT_PUBLIC_BUILD_DATE}
+                                </Text>
+                            )}
+                        </div>
+                    </>
+                )}
             </Menu.Dropdown>
         </Menu>
     );

@@ -29,6 +29,11 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+ARG BUILD_TAG
+ARG BUILD_DATE
+ENV NEXT_PUBLIC_BUILD_TAG=$BUILD_TAG
+ENV NEXT_PUBLIC_BUILD_DATE=$BUILD_DATE
+
 RUN \
   if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
   elif [ -f yarn.lock ]; then yarn run build; \

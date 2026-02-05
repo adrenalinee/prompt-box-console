@@ -70,8 +70,9 @@ export default function RootPage() {
                         </>
                     ) : (
                         <>
+                            {session.user.name}! 안녕하세요.
                             <Text fw={700} size="xl">
-                                Workspace 선택
+                                Workspace 를 선택하세요.
                             </Text>
                             {isLoading ? (
                                 <Loader />
