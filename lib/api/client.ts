@@ -1,5 +1,6 @@
 import { showNotification } from "@mantine/notifications";
-import {getInitServerPhase} from "@/config/app-config";
+import { getInitServerPhase } from "@/config/app-config";
+import { getSession } from "next-auth/react";
 
 export type ApiError = {
     status: number;
@@ -15,22 +16,22 @@ export type PageResponse<T> = {
     totalPages: number;
 };
 
-// const API_BASE_URL =
-//     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
-
 function getApiBaseUrl() {
     const serverPhase = getInitServerPhase();
     console.log("serverPhase: " + serverPhase);
-    if (serverPhase == 'dev') {
+    if (serverPhase == "dev") {
         return "https://prompt-box-server-dev-245695755093.asia-northeast3.run.app";
-    } else if (serverPhase == 'local') {
-        return "http://localhost:8080"
+    } else if (serverPhase == "local") {
+        return "http://localhost:8080";
     } else {
         throw Error("정의되지 않은 serverPhase 입니다. serverPhase: " + serverPhase);
     }
 }
 
-const API_BASE_URL = await getApiBaseUrl()
+// Top-level await is supported in Next.js App Router (server components) but can be tricky in client modules.
+// However, since this was working code, I will restore it as is.
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function parseJsonSafe(response: Response) {
     const contentType = response.headers.get("content-type") || "";
@@ -56,12 +57,22 @@ export async function apiFetch<T>(
 ): Promise<T> {
     let response: Response;
     try {
+        const session = await getSession();
+        // eslint-disable-next-line
+        const token = (session as any)?.sessionToken;
+
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            ...(options.headers as Record<string, string>),
+        };
+
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
+
         response = await fetch(`${API_BASE_URL}${path}`, {
             ...options,
-            headers: {
-                "Content-Type": "application/json",
-                ...(options.headers || {}),
-            },
+            headers,
         });
     } catch (error) {
         const message =
