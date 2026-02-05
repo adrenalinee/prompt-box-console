@@ -3,8 +3,12 @@
 import React from "react";
 import { Button, Paper, Stack, Text, Title } from "@mantine/core";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 
 export default function LoginCard() {
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get("callbackUrl") || "/";
+
     return (
         <Paper withBorder shadow="sm" p="xl" w={360}>
             <Stack gap="md">
@@ -17,7 +21,7 @@ export default function LoginCard() {
                 <Button
                     fullWidth
                     size="md"
-                    onClick={() => signIn("google", { callbackUrl: "/" })}
+                    onClick={() => signIn("google", { callbackUrl })}
                 >
                     Google로 로그인
                 </Button>
