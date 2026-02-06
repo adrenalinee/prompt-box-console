@@ -60,7 +60,10 @@ export default function NewPromptPage() {
             >
                 <Stack>
                     <TextInput label="Prompt 이름" required {...form.getInputProps("name")} />
-                    <TextInput label="설명" {...form.getInputProps("description")} />
+                    <Textarea
+                        label="설명"
+                        autosize
+                        {...form.getInputProps("description")} />
                     <Textarea
                         label="Instructions"
                         autosize

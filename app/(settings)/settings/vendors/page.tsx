@@ -13,7 +13,7 @@ import {
     Select,
     Stack,
     Table,
-    Text,
+    Text, Textarea,
     TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -265,7 +265,10 @@ function VendorsContent() {
                 <form onSubmit={form.onSubmit((values) => mutation.mutate(values))}>
                     <Stack>
                         <TextInput label="Name" required {...form.getInputProps("name")} />
-                        <TextInput label="Description" {...form.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...form.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={mutation.isPending}>
                                 등록
@@ -279,7 +282,10 @@ function VendorsContent() {
                 <form onSubmit={editForm.onSubmit((values) => updateMutation.mutate(values))}>
                     <Stack>
                         <TextInput label="Name" required {...editForm.getInputProps("name")} />
-                        <TextInput label="Description" {...editForm.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...editForm.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={updateMutation.isPending}>
                                 수정

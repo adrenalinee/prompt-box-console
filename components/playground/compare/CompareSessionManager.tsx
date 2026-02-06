@@ -119,13 +119,14 @@ export function CompareSessionManager({
                     >
                         실행
                     </Button>
+                </Group>
+                <Group>
                     <Switch
                         label="입력 동기화"
+                        labelPosition="left"
                         checked={isSyncEnabled}
                         onChange={(event) => setIsSyncEnabled(event.currentTarget.checked)}
                     />
-                </Group>
-                <Group>
                     <Button
                         leftSection={<IconPlus size={16} />}
                         variant="default"

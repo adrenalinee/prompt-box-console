@@ -13,7 +13,7 @@ import {
     Select,
     Stack,
     Table,
-    Text,
+    Text, Textarea,
     TextInput,
     Tooltip,
 } from "@mantine/core";
@@ -381,7 +381,10 @@ function SettingsApiKeysContent() {
                         />
                         <TextInput label="Name" {...form.getInputProps("name")} />
                         <TextInput label="API Key" required {...form.getInputProps("value")} />
-                        <TextInput label="Description" {...form.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...form.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={createMutation.isPending}>
                                 등록
@@ -418,7 +421,10 @@ function SettingsApiKeysContent() {
                         />
                         <TextInput label="Name" {...editForm.getInputProps("name")} />
                         <TextInput label="API Key (새 값)" {...editForm.getInputProps("value")} />
-                        <TextInput label="Description" {...editForm.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...editForm.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={updateMutation.isPending}>
                                 수정

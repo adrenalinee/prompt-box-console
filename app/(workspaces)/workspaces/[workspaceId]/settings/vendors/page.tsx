@@ -120,7 +120,12 @@ export default function WorkspaceVendorsPage() {
                         {items.map((vendor) => (
                             <Table.Tr key={vendor.id}>
                                 <Table.Td>{vendor.name}</Table.Td>
-                                <Table.Td>{vendor.description ?? "-"}</Table.Td>
+                                <Table.Td>
+                                    <Text
+                                        size="sm"
+                                        lineClamp={2}
+                                    >{vendor.description ?? "-"}</Text>
+                                </Table.Td>
                                 <Table.Td ta="right">
                                     <Button
                                         size="xs"

@@ -67,5 +67,5 @@ jobs:
           project_id: ${{ env.TARGET_PROJECT_ID }}
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
-          image: ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:latest
+          image: ${{ env.IMAGE_PATH }}/${{ env.REPOSITORY_NAME }}:${BUILD_TAG}
           flags: '--port=3000 --allow-unauthenticated'

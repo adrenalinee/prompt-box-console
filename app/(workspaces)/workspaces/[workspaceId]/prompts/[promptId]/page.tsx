@@ -5,6 +5,7 @@ import {
     ActionIcon,
     Alert,
     Button,
+    Collapse,
     Divider,
     Group,
     Loader,
@@ -16,15 +17,15 @@ import {
     Table,
     Tabs,
     Text,
-    TextInput,
     Textarea,
+    TextInput,
     Tooltip,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { IconArrowsDiff, IconDotsVertical, IconGitBranch } from "@tabler/icons-react";
-import Link from "next/link";
-import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {useForm} from "@mantine/form";
+import {IconArrowsDiff, IconChevronDown, IconDotsVertical, IconGitBranch, IconInfoCircle} from "@tabler/icons-react";
+import {useParams, usePathname, useRouter, useSearchParams} from "next/navigation";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import type {AdditionalInputItem, PromptRef} from "@/lib/api/prompts";
 import {
     addAdditionalInput,
     createRef,
@@ -38,9 +39,9 @@ import {
     updatePrompt,
     updateRef,
 } from "@/lib/api/prompts";
-import type { AdditionalInputItem, PromptRef } from "@/lib/api/prompts";
-import { queryKeys } from "@/lib/query/keys";
-import { PromptEditor } from "@/components/prompts/PromptEditor";
+import {queryKeys} from "@/lib/query/keys";
+import {PromptEditor} from "@/components/prompts/PromptEditor";
+import {useDisclosure} from "@mantine/hooks";
 
 const roleOptions = [
     { value: "USER", label: "USER" },
@@ -112,6 +113,9 @@ export default function PromptDetailPage() {
     const [orderedInputs, setOrderedInputs] = React.useState<AdditionalInputItem[]>([]);
     const [currentInstructions, setCurrentInstructions] = React.useState<string>("");
     const [loadedRefId, setLoadedRefId] = React.useState<number | null>(null);
+
+    const [openedPromptDesc, { toggle: togglePromptDesc }] = useDisclosure(false);
+    const [openedPromptRefDesc, { toggle: togglePromptRefDesc }] = useDisclosure(false);
 
     const { data: prompt, isLoading: promptLoading } = useQuery({
         queryKey: queryKeys.prompt(promptId),
@@ -401,14 +405,22 @@ export default function PromptDetailPage() {
 
     return (
         <Stack>
-            <Group justify="space-between" align="flex-start">
-                <Stack gap={2}>
-                    <Text fw={700} size="xl">
-                        {prompt?.name ?? "Prompt"}
-                    </Text>
-                    <Text c="dimmed" size="sm">
-                        {prompt?.description ?? ""}
-                    </Text>
+            <Group justify="space-between" align="flex-start" wrap="nowrap">
+                <Stack gap="xs">
+                    <Group gap="xs" align="center">
+                        <Text fw={700} size="xl">
+                            {prompt?.name ?? "Prompt"}
+                        </Text>
+                        <ActionIcon onClick={togglePromptDesc} c="dimmed" size="xs" variant="white">
+                            <IconChevronDown />
+                        </ActionIcon>
+                    </Group>
+
+                    <Collapse in={openedPromptDesc}>
+                        <Text lineClamp={2} c="dimmed" size="sm">
+                            {prompt?.description ?? ""}
+                        </Text>
+                    </Collapse>
                 </Stack>
                 <Menu position="bottom-end" shadow="md" width={180}>
                     <Menu.Target>
@@ -432,7 +444,7 @@ export default function PromptDetailPage() {
 
             <Stack gap="xs">
                 <Group justify="space-between">
-                    <Group>
+                    <Group gap="xs">
                         <Button
                             variant="default"
                             leftSection={<IconGitBranch size={16} />}
@@ -450,6 +462,9 @@ export default function PromptDetailPage() {
                                 최신 태그
                             </Text>
                         )}
+                        <ActionIcon onClick={togglePromptRefDesc} c="dimmed" size="xs" variant="white">
+                            <IconChevronDown />
+                        </ActionIcon>
                     </Group>
                     <Group>
                         <Tooltip label="현재 수정된 내용으로 새로운 branch 를 생성합니다." withArrow>
@@ -531,6 +546,11 @@ export default function PromptDetailPage() {
                         </Menu>
                     </Group>
                 </Group>
+                <Collapse in={openedPromptRefDesc}>
+                    <Text lineClamp={2} c="dimmed" size="sm">
+                        {selectedRef?.description ?? ""}
+                    </Text>
+                </Collapse>
             </Stack>
 
             <Divider />
@@ -850,8 +870,9 @@ export default function PromptDetailPage() {
                 >
                     <Stack>
                         <TextInput label="Name" required {...promptForm.getInputProps("name")} />
-                        <TextInput
-                            label="Description"
+                        <Textarea
+                            label="설명"
+                            autosize
                             {...promptForm.getInputProps("description")}
                         />
                         <Group justify="flex-end">
@@ -900,8 +921,9 @@ export default function PromptDetailPage() {
                 >
                     <Stack>
                         <TextInput label="Name" required {...refMetaForm.getInputProps("name")} />
-                        <TextInput
-                            label="Description"
+                        <Textarea
+                            label="설명"
+                            autosize
                             {...refMetaForm.getInputProps("description")}
                         />
                         <Group justify="flex-end">

@@ -291,7 +291,7 @@ function SettingsPromptsContent() {
                 </Stack>
             </Modal>
 
-            <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Prompt 등록">
+            <Modal opened={createOpen} onClose={() => setCreateOpen(false)} title="Prompt 등록" size="xl">
                 <form
                     onSubmit={form.onSubmit((values) => {
                         if (!workspaceId) return;
@@ -300,8 +300,14 @@ function SettingsPromptsContent() {
                 >
                     <Stack>
                         <TextInput label="Name" required {...form.getInputProps("name")} />
-                        <TextInput label="Description" {...form.getInputProps("description")} />
-                        <Textarea label="Instructions" minRows={6} {...form.getInputProps("instructions")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...form.getInputProps("description")} />
+                        <Textarea
+                            label="Instructions"
+                            autosize
+                            minRows={6} {...form.getInputProps("instructions")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={createMutation.isPending}>
                                 등록

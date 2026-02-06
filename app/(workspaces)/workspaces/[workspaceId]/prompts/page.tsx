@@ -134,7 +134,12 @@ export default function PromptsPage() {
                                 <Table.Td>{prompt.name}</Table.Td>
                                 <Table.Td>{prompt.defaultBranchRefId ?? "-"}</Table.Td>
                                 <Table.Td>{prompt.latestTagRefId ?? "-"}</Table.Td>
-                                <Table.Td>{prompt.description ?? "-"}</Table.Td>
+                                <Table.Td>
+                                    <Text
+                                        size="sm"
+                                        lineClamp={2}
+                                    >{prompt.description ?? "-"}</Text>
+                                </Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
                                         <Button

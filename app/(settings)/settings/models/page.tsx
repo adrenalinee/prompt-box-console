@@ -14,7 +14,7 @@ import {
     Select,
     Stack,
     Table,
-    Text,
+    Text, Textarea,
     TextInput,
     Tooltip,
 } from "@mantine/core";
@@ -407,7 +407,10 @@ function SettingsModelsContent() {
                             min={0}
                             {...form.getInputProps("outputPrice")}
                         />
-                        <TextInput label="Description" {...form.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...form.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={mutation.isPending} disabled={!vendorId}>
                                 등록
@@ -469,7 +472,10 @@ function SettingsModelsContent() {
                             min={0}
                             {...editForm.getInputProps("outputPrice")}
                         />
-                        <TextInput label="Description" {...editForm.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...editForm.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={updateMutation.isPending}>
                                 수정

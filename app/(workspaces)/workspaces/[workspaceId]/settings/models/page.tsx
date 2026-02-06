@@ -167,7 +167,12 @@ export default function ModelsPage() {
                                 <Table.Td>{model.contextWindow ?? "-"}</Table.Td>
                                 <Table.Td>{model.inputPrice ?? "-"}</Table.Td>
                                 <Table.Td>{model.outputPrice ?? "-"}</Table.Td>
-                                <Table.Td>{model.description ?? "-"}</Table.Td>
+                                <Table.Td>
+                                    <Text
+                                        size="sm"
+                                        lineClamp={2}
+                                    >{model.description ?? "-"}</Text>
+                                </Table.Td>
                                 <Table.Td ta="right">
                                     <Button
                                         size="xs"

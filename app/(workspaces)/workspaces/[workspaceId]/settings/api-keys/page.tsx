@@ -13,7 +13,7 @@ import {
     Select,
     Stack,
     Table,
-    Text,
+    Text, Textarea,
     TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -267,7 +267,13 @@ export default function ApiKeysPage() {
                                 <Table.Td>{vendorMap.get(apiKey.vendorId) ?? apiKey.vendorId}</Table.Td>
                                 <Table.Td>{apiKey.name ?? "-"}</Table.Td>
                                 <Table.Td>{maskKey()}</Table.Td>
-                                <Table.Td>{apiKey.description ?? "-"}</Table.Td>
+                                <Table.Td>
+                                    <Text
+                                        size="sm"
+                                        lineClamp={2}
+                                    >{apiKey.description ?? "-"}</Text>
+
+                                </Table.Td>
                                 <Table.Td ta="right">
                                     <Group gap="xs" justify="flex-end">
                                         <Button
@@ -372,7 +378,10 @@ export default function ApiKeysPage() {
                         />
                         <TextInput label="Name" {...form.getInputProps("name")} />
                         <TextInput label="API Key" required {...form.getInputProps("value")} />
-                        <TextInput label="Description" {...form.getInputProps("description")} />
+                        <Textarea
+                            label="Description"
+                            autosize
+                            {...form.getInputProps("description")} />
                         <Group justify="flex-end">
                             <Button type="submit" loading={createMutation.isPending}>
                                 등록
