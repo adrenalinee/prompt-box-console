@@ -58,6 +58,31 @@ export function useExecuteForm({
     const safeRefs = Array.isArray(refs) ? refs : [];
     const selectedRef = safeRefs.find((ref) => String(ref.id) === form.values.refId);
 
+    // Sync form values with Props (for external updates like URL changes or auto-selection)
+    React.useEffect(() => {
+        if (initialPromptId !== undefined && initialPromptId !== form.values.promptId) {
+            form.setFieldValue("promptId", initialPromptId);
+        }
+    }, [initialPromptId]);
+
+    React.useEffect(() => {
+        if (initialRefId !== undefined && initialRefId !== form.values.refId) {
+            form.setFieldValue("refId", initialRefId);
+        }
+    }, [initialRefId]);
+
+    React.useEffect(() => {
+        if (initialModelId !== undefined && initialModelId !== form.values.modelId) {
+            form.setFieldValue("modelId", initialModelId);
+        }
+    }, [initialModelId]);
+
+    React.useEffect(() => {
+        if (initialApiKeyId !== undefined && initialApiKeyId !== form.values.apiKeyId) {
+            form.setFieldValue("apiKeyId", initialApiKeyId);
+        }
+    }, [initialApiKeyId]);
+
 
     const normalizeInputItems = React.useCallback((items: InputItemForm[]) => {
         let next = items.map((item) => ({ ...item }));
