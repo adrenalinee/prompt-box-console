@@ -66,6 +66,11 @@ export function LandingPage({ heroAction }: LandingPageProps) {
                     order={1}
                     size={rem(48)}
                     fw={900}
+                >PromptBox</Title>
+                <Title
+                    order={1}
+                    size={rem(48)}
+                    fw={900}
                     style={{ lineHeight: 1.1 }}
                 >
                     프롬프트를 <Text component="span" c="blue" inherit>테스트</Text>하고 <Text component="span" c="blue" inherit>관리</Text>할 수 있습니다.

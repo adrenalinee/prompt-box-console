@@ -1,9 +1,12 @@
 import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 import { showNotification } from "@mantine/notifications";
 import { getSession } from "next-auth/react";
+import {getApiBaseUrl} from "@/config/app-config";
 
-const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+// const API_BASE_URL =
+//     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
+
+const API_BASE_URL = getApiBaseUrl();
 
 export type ExecutePayload = {
     workspaceId: string;

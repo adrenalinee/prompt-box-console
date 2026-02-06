@@ -1,5 +1,5 @@
 import { showNotification } from "@mantine/notifications";
-import { getInitServerPhase } from "@/config/app-config";
+import {getApiBaseUrl, getInitServerPhase} from "@/config/app-config";
 import { getSession, signOut } from "next-auth/react";
 
 export type ApiError = {
@@ -16,17 +16,17 @@ export type PageResponse<T> = {
     totalPages: number;
 };
 
-function getApiBaseUrl() {
-    const serverPhase = getInitServerPhase();
-    console.log("serverPhase: " + serverPhase);
-    if (serverPhase == "dev") {
-        return "https://prompt-box-server-dev-245695755093.asia-northeast3.run.app";
-    } else if (serverPhase == "local") {
-        return "http://localhost:8080";
-    } else {
-        throw Error("정의되지 않은 serverPhase 입니다. serverPhase: " + serverPhase);
-    }
-}
+// function getApiBaseUrl() {
+//     const serverPhase = getInitServerPhase();
+//     console.log("serverPhase: " + serverPhase);
+//     if (serverPhase == "dev") {
+//         return "https://prompt-box-server-dev-245695755093.asia-northeast3.run.app";
+//     } else if (serverPhase == "local") {
+//         return "http://localhost:8080";
+//     } else {
+//         throw Error("정의되지 않은 serverPhase 입니다. serverPhase: " + serverPhase);
+//     }
+// }
 
 // Top-level await is supported in Next.js App Router (server components) but can be tricky in client modules.
 // However, since this was working code, I will restore it as is.

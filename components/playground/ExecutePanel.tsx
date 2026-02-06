@@ -414,8 +414,8 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                     <Stack gap="xs">
                         <UnstyledButton onClick={toggleInstructions}>
                             <Group gap="xs">
+                                <Text fw={600}>Instructions</Text>
                                 {instructionsOpen ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
-                                <Text fw={600} size="sm">Instructions</Text>
                             </Group>
                         </UnstyledButton>
                         <Collapse in={instructionsOpen}>
@@ -431,8 +431,8 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                     <Stack gap="xs">
                         <UnstyledButton onClick={toggleInputItems}>
                             <Group gap="xs">
-                                {inputItemsOpen ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
                                 <Text fw={600}>Input Items</Text>
+                                {inputItemsOpen ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
                             </Group>
                         </UnstyledButton>
                         <Collapse in={inputItemsOpen}>
