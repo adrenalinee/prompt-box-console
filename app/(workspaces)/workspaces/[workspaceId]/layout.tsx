@@ -52,18 +52,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <Text fw={700} component={Link} href="/" className="hover:opacity-80">
                             PromptBox
                         </Text>
-                        <Select
-                            data={workspaceOptions}
-                            value={workspaceId}
-                            onChange={(value) => {
-                                if (value) {
-                                    router.push(`/workspaces/${value}/playground`);
-                                }
-                            }}
-                            placeholder={isLoading ? "Workspace 로딩..." : "Workspace 선택"}
-                            size="xs"
-                            w={200}
-                        />
+                        <Tooltip label="워크스페이스">
+                            <Select
+                                data={workspaceOptions}
+                                value={workspaceId}
+                                onChange={(value) => {
+                                    if (value) {
+                                        router.push(`/workspaces/${value}/playground`);
+                                    }
+                                }}
+                                placeholder={isLoading ? "Workspace 로딩..." : "Workspace 선택"}
+                                size="xs"
+                                w={200}
+                            />
+                        </Tooltip>
                         <Tooltip label="사이드 메뉴 열고 닫기">
                             <ActionIcon variant="subtle" onClick={toggleDesktop} visibleFrom="sm" size="input-sm" color="gray">
                                 <IconMenu2 size={18} />
