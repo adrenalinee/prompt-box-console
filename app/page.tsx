@@ -58,7 +58,6 @@ export default function RootPage() {
                     </Group>
                 </Group>
             </AppShell.Header>
-            return (
             <AppShell header={{ height: 60 }} padding="md">
                 <AppShell.Header>
                     <Group h="100%" px="md" justify="space-between">

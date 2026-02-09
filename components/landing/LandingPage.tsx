@@ -84,7 +84,7 @@ export function LandingPage({ heroAction }: LandingPageProps) {
                 ) : (
                     <Button
                         size="xl"
-                        radius="md"
+                        variant="filled"
                         component={Link}
                         href="/login"
                     >
@@ -98,7 +98,8 @@ export function LandingPage({ heroAction }: LandingPageProps) {
                 {features.map((feature, index) => (
                     <Paper
                         key={index}
-                        shadow="sm"
+                        className="hover:shadow-lg"
+                        // shadow="xs"
                         radius="md"
                         p="xl"
                         withBorder
