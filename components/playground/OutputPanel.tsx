@@ -94,7 +94,7 @@ export function OutputPanel({
                     {callId && (
                         <Button
                             size="sm"
-                            leftSection={<IconExternalLink size={18} />}
+                            rightSection={<IconExternalLink size={18} />}
                             component={Link}
                             target="_blank"
                             href={`/workspaces/${workspaceId}/logs/${callId}`}

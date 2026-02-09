@@ -121,6 +121,7 @@ export default function PromptsPage() {
                 <Table striped highlightOnHover withTableBorder>
                     <Table.Thead>
                         <Table.Tr>
+                            <Table.Th>promptId</Table.Th>
                             <Table.Th>Name</Table.Th>
                             {/*<Table.Th>Default Branch Ref</Table.Th>*/}
                             {/*<Table.Th>Latest Tag Ref</Table.Th>*/}
@@ -131,6 +132,7 @@ export default function PromptsPage() {
                     <Table.Tbody>
                         {items.map((prompt) => (
                             <Table.Tr key={prompt.id}>
+                                <Table.Td>{prompt.id}</Table.Td>
                                 <Table.Td>{prompt.name}</Table.Td>
                                 {/*<Table.Td>{prompt.defaultBranchRefId ?? "-"}</Table.Td>*/}
                                 {/*<Table.Td>{prompt.latestTagRefId ?? "-"}</Table.Td>*/}

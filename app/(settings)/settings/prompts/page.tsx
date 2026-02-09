@@ -277,7 +277,7 @@ function SettingsPromptsContent() {
                         {detail?.workspaceId && (
                             <Button
                                 variant="light"
-                                leftSection={<IconExternalLink size={16} />}
+                                rightSection={<IconExternalLink size={16} />}
                                 component="a"
                                 target="_blank"
                                 rel="noreferrer"

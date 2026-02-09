@@ -4,6 +4,7 @@ import React from "react";
 import {
     Alert,
     Button,
+    CloseButton,
     Group,
     Loader,
     Modal,
@@ -12,6 +13,7 @@ import {
     Stack,
     Table,
     Text,
+    TextInput,
     Tooltip,
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +33,7 @@ function SettingsLogsContent() {
     const workspaceId = searchParams.get("workspaceId") ?? "";
     const modelId = searchParams.get("modelId") ?? "";
     const status = searchParams.get("status") ?? "";
+    const promptId = searchParams.get("promptId") ?? "";
     const page = Number(searchParams.get("page") || "1");
     const size = Number(searchParams.get("size") || "20");
     const sort = searchParams.get("sort") || "";
@@ -72,7 +75,7 @@ function SettingsLogsContent() {
 
     const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [
-            ...queryKeys.logsAll({ workspaceId, modelId, status }),
+            ...queryKeys.logsAll({ workspaceId, modelId, status, promptId }),
             page,
             size,
             sort,
@@ -83,6 +86,7 @@ function SettingsLogsContent() {
                     workspaceId: workspaceId || undefined,
                     modelId: modelId || undefined,
                     status: status || undefined,
+                    promptId: promptId || undefined,
                 },
                 page - 1,
                 size,
@@ -114,7 +118,22 @@ function SettingsLogsContent() {
             <Text fw={700} size="xl">
                 Logs
             </Text>
-            <Group grow>
+            <Group grow align="flex-start">
+                <TextInput
+                    label="Prompt ID"
+                    placeholder="Prompt ID"
+                    value={promptId}
+                    onChange={(event) => updateParam("promptId", event.currentTarget.value)}
+                    rightSection={
+                        promptId ? (
+                            <CloseButton
+                                aria-label="Clear input"
+                                onClick={() => updateParam("promptId", "")}
+                                style={{ display: 'block' }} // visible only when content
+                            />
+                        ) : null
+                    }
+                />
                 <Select
                     label="Workspace"
                     placeholder="Workspace 선택"

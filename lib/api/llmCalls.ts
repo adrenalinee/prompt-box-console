@@ -1,7 +1,7 @@
 import { apiFetch, ApiFetchConfig, PageResponse } from "@/lib/api/client";
 import { showNotification } from "@mantine/notifications";
 import { getSession } from "next-auth/react";
-import {getApiBaseUrl} from "@/config/app-config";
+import { getApiBaseUrl } from "@/config/app-config";
 
 // const API_BASE_URL =
 //     process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8080";
@@ -341,7 +341,7 @@ export async function fetchLogs(
 
 export async function fetchLogsPage(
     workspaceId: string,
-    filters: { modelId?: string; status?: string },
+    filters: { modelId?: string; status?: string; promptId?: string },
     page = 0,
     size = 50,
     sort?: string,
@@ -350,6 +350,7 @@ export async function fetchLogsPage(
     const params = new URLSearchParams();
     if (filters.modelId) params.set("modelId", String(filters.modelId));
     if (filters.status) params.set("status", String(filters.status));
+    if (filters.promptId) params.set("promptId", String(filters.promptId));
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
@@ -362,7 +363,7 @@ export async function fetchLogsPage(
 }
 
 export async function fetchAllLogs(
-    filters: { workspaceId?: string; modelId?: string; status?: string },
+    filters: { workspaceId?: string; modelId?: string; status?: string; promptId?: string },
     page = 0,
     size = 50,
     sort?: string,
@@ -371,6 +372,7 @@ export async function fetchAllLogs(
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
     if (filters.modelId) params.set("modelId", String(filters.modelId));
     if (filters.status) params.set("status", String(filters.status));
+    if (filters.promptId) params.set("promptId", String(filters.promptId));
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);
@@ -380,7 +382,7 @@ export async function fetchAllLogs(
 }
 
 export async function fetchAllLogsPage(
-    filters: { workspaceId?: string; modelId?: string; status?: string },
+    filters: { workspaceId?: string; modelId?: string; status?: string; promptId?: string },
     page = 0,
     size = 50,
     sort?: string,
@@ -390,6 +392,7 @@ export async function fetchAllLogsPage(
     if (filters.workspaceId) params.set("workspaceId", filters.workspaceId);
     if (filters.modelId) params.set("modelId", String(filters.modelId));
     if (filters.status) params.set("status", String(filters.status));
+    if (filters.promptId) params.set("promptId", String(filters.promptId));
     params.set("page", String(page));
     params.set("size", String(size));
     if (sort) params.set("sort", sort);

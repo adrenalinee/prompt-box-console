@@ -4,6 +4,7 @@ import React from "react";
 import {
     Alert,
     Button,
+    CloseButton,
     Group,
     Loader,
     NumberFormatter,
@@ -12,6 +13,7 @@ import {
     Stack,
     Table,
     Text,
+    TextInput,
     Tooltip
 } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +31,7 @@ export default function LogsPage() {
 
     const modelId = searchParams.get("modelId") ?? "";
     const status = searchParams.get("status") ?? "";
+    const promptId = searchParams.get("promptId") ?? "";
     const page = Number(searchParams.get("page") || "1");
     const size = Number(searchParams.get("size") || "20");
     const sort = searchParams.get("sort") || "";
@@ -61,7 +64,7 @@ export default function LogsPage() {
 
     const { data: pageData, isLoading, isError, error } = useQuery({
         queryKey: [
-            ...queryKeys.logs(workspaceId, { modelId, status }),
+            ...queryKeys.logs(workspaceId, { modelId, status, promptId }),
             page,
             size,
             sort,
@@ -72,6 +75,7 @@ export default function LogsPage() {
                 {
                     modelId: modelId || undefined,
                     status: status || undefined,
+                    promptId: promptId || undefined,
                 },
                 page - 1,
                 size,
@@ -95,7 +99,22 @@ export default function LogsPage() {
             <Text fw={700} size="xl">
                 Logs
             </Text>
-            <Group grow>
+            <Group grow align="flex-start">
+                <TextInput
+                    label="Prompt ID"
+                    placeholder="Prompt ID"
+                    value={promptId}
+                    onChange={(event) => updateParam("promptId", event.currentTarget.value)}
+                    rightSection={
+                        promptId ? (
+                            <CloseButton
+                                aria-label="Clear input"
+                                onClick={() => updateParam("promptId", "")}
+                                style={{ display: 'block' }} // visible only when content
+                            />
+                        ) : null
+                    }
+                />
                 <Select
                     label="Model"
                     placeholder="전체"

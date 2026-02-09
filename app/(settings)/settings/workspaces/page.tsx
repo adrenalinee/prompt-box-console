@@ -9,30 +9,31 @@ import {
     Loader,
     Menu,
     Modal,
+    NumberInput,
     Pagination,
     Select,
     Stack,
     Table,
     Text,
+    Textarea,
     TextInput,
-    NumberInput, Textarea,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconDotsVertical } from "@tabler/icons-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CodeHighlight } from "@mantine/code-highlight";
-import { showNotification } from "@mantine/notifications";
+import {useForm} from "@mantine/form";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {IconDotsVertical} from "@tabler/icons-react";
+import {usePathname, useRouter, useSearchParams} from "next/navigation";
+import {CodeHighlight} from "@mantine/code-highlight";
+import {showNotification} from "@mantine/notifications";
 import {
     createWorkspace,
     deleteWorkspace,
     fetchDefaultOptions,
     fetchWorkspace,
     fetchWorkspacesPage,
-    upsertDefaultOptions,
     updateWorkspace,
+    upsertDefaultOptions,
 } from "@/lib/api/workspaces";
-import { queryKeys } from "@/lib/query/keys";
+import {queryKeys} from "@/lib/query/keys";
 
 function WorkspacesContent() {
     const router = useRouter();

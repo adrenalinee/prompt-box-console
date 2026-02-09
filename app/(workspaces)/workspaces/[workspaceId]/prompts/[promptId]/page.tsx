@@ -22,7 +22,14 @@ import {
     Tooltip,
 } from "@mantine/core";
 import {useForm} from "@mantine/form";
-import {IconArrowsDiff, IconChevronDown, IconDotsVertical, IconGitBranch, IconInfoCircle} from "@tabler/icons-react";
+import {
+    IconArrowsDiff,
+    IconChevronDown,
+    IconDotsVertical,
+    IconExternalLink,
+    IconGitBranch,
+    IconSearch
+} from "@tabler/icons-react";
 import {useParams, usePathname, useRouter, useSearchParams} from "next/navigation";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {AdditionalInputItem, PromptRef} from "@/lib/api/prompts";
@@ -417,9 +424,22 @@ export default function PromptDetailPage() {
                     </Group>
 
                     <Collapse in={openedPromptDesc}>
-                        <Text lineClamp={2} c="dimmed" size="sm">
-                            {prompt?.description ?? ""}
-                        </Text>
+                        <Stack gap="xs">
+                            <Group gap="xs">
+                                <Text size="xs">id: {prompt?.id}</Text>
+                                <Button
+                                    variant="light"
+                                    size="xs"
+                                    leftSection={<IconSearch size={14} />}
+                                    rightSection={<IconExternalLink size={14} />}
+                                    component="a"
+                                    href={`/workspaces/${workspaceId}/logs?promptId=${prompt?.id}`}
+                                >로그 검색</Button>
+                            </Group>
+                            <Text c="dimmed" size="sm">
+                                {prompt?.description ?? ""}
+                            </Text>
+                        </Stack>
                     </Collapse>
                 </Stack>
                 <Menu position="bottom-end" shadow="md" width={180}>
@@ -547,9 +567,14 @@ export default function PromptDetailPage() {
                     </Group>
                 </Group>
                 <Collapse in={openedPromptRefDesc}>
-                    <Text lineClamp={2} c="dimmed" size="sm">
-                        {selectedRef?.description ?? ""}
-                    </Text>
+                    <Stack gap="xs">
+                        <Text size="xs">id: {selectedRef?.id}</Text>
+                        <Text c="dimmed" size="sm">
+                            {selectedRef?.description ?? ""}
+                        </Text>
+                    </Stack>
+
+
                 </Collapse>
             </Stack>
 
