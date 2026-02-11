@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import {ActionIcon, Button, Divider, Grid, Group, Paper, Switch, Text, Title, Tooltip} from "@mantine/core";
+import { ActionIcon, Button, Divider, Grid, Group, Paper, Switch, Text, Title, Tooltip } from "@mantine/core";
 import { IconPlus, IconPlayerPlay, IconArrowsDiff } from "@tabler/icons-react";
 import { CompareColumnContainer } from "./CompareColumnContainer";
 import type { CompactExecutePanelRef } from "./CompactExecutePanel";
@@ -77,7 +77,14 @@ export function CompareSessionManager({
 
     const handleRunAll = () => {
         panelRefs.current.forEach((panel) => {
-            panel.execute();
+            const values = panel.getValues();
+            const effectiveItems = values.inputItems.filter(
+                (item) => item.message.trim().length > 0
+            );
+            const hasContent = values.instructions.trim().length > 0 || effectiveItems.length > 0;
+            if (hasContent) {
+                panel.execute();
+            }
         });
     };
 
@@ -110,7 +117,7 @@ export function CompareSessionManager({
             <Group justify="space-between" align="center">
                 <Group gap="sm">
                     <Text fw={700} size="xl">
-                        Playground / Compare
+                        Playground / Compare (beta!!)
                     </Text>
                     <Button
                         leftSection={<IconPlayerPlay size={16} />}
@@ -141,32 +148,32 @@ export function CompareSessionManager({
                 {sessions.map((session) => (
                     <Grid.Col key={session.id} span={{ base: 12, md: 6, lg: 4 }} style={{ minWidth: 400 }}>
                         {/*<Paper withBorder p="md" h="100%">*/}
-                            <CompareColumnContainer
-                                ref={(el: CompactExecutePanelRef | null) => {
-                                    if (el) {
-                                        panelRefs.current.set(session.id, el);
-                                    } else {
-                                        panelRefs.current.delete(session.id);
-                                    }
-                                }}
-                                workspaceId={workspaceId}
-                                initialPromptId={session.initialPromptId}
-                                initialRefId={session.initialRefId}
-                                initialModelId={session.initialModelId}
-                                initialApiKeyId={session.initialApiKeyId}
-                                prompts={prompts}
-                                promptsError={promptsError}
-                                models={models}
-                                modelsError={modelsError}
-                                apiKeys={apiKeys}
-                                apiKeysError={apiKeysError}
-                                vendors={vendors}
-                                vendorsError={vendorsError}
-                                defaultOptions={defaultOptions}
-                                workspaceDefaultModelId={workspaceDefaultModelId}
-                                onRemove={() => handleRemoveColumn(session.id)}
-                                onValuesChange={(values) => handleValuesChange(session.id, values)}
-                            />
+                        <CompareColumnContainer
+                            ref={(el: CompactExecutePanelRef | null) => {
+                                if (el) {
+                                    panelRefs.current.set(session.id, el);
+                                } else {
+                                    panelRefs.current.delete(session.id);
+                                }
+                            }}
+                            workspaceId={workspaceId}
+                            initialPromptId={session.initialPromptId}
+                            initialRefId={session.initialRefId}
+                            initialModelId={session.initialModelId}
+                            initialApiKeyId={session.initialApiKeyId}
+                            prompts={prompts}
+                            promptsError={promptsError}
+                            models={models}
+                            modelsError={modelsError}
+                            apiKeys={apiKeys}
+                            apiKeysError={apiKeysError}
+                            vendors={vendors}
+                            vendorsError={vendorsError}
+                            defaultOptions={defaultOptions}
+                            workspaceDefaultModelId={workspaceDefaultModelId}
+                            onRemove={() => handleRemoveColumn(session.id)}
+                            onValuesChange={(values) => handleValuesChange(session.id, values)}
+                        />
                         {/*</Paper>*/}
                     </Grid.Col>
                 ))}

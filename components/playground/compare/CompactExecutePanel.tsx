@@ -223,7 +223,7 @@ export const CompactExecutePanel = React.forwardRef<CompactExecutePanelRef, Exec
 
         onExecute({
             refId: useRef ? Number(values.refId) : undefined,
-            instructions: useRef ? undefined : values.instructions || undefined,
+            instructions: useRef ? undefined : values.instructions,
             modelId: values.modelId,
             apiKeyId: values.apiKeyId,
             inputItems: effectiveItems,

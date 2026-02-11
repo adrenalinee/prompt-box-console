@@ -39,7 +39,7 @@ import { PromptSelector } from "./PromptSelector";
 
 import type { ExecuteFormValues, InputItemForm } from "./types";
 import { useExecuteForm } from "./useExecuteForm";
-import {useDisclosure} from "@mantine/hooks";
+import { useDisclosure } from "@mantine/hooks";
 
 
 export type ExecutePanelRef = {
@@ -286,7 +286,7 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
 
                     onExecute({
                         refId: useRef ? Number(values.refId) : undefined,
-                        instructions: useRef ? undefined : values.instructions || undefined,
+                        instructions: useRef ? undefined : values.instructions,
                         modelId: values.modelId,
                         apiKeyId: values.apiKeyId,
                         inputItems: effectiveItems,

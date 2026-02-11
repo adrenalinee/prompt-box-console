@@ -105,7 +105,7 @@ export function OutputPanel({
                     )}
                 </Group>
                 {errorMessage && (
-                    <Alert color="red" title="실행 오류">
+                    <Alert color="red" title="서버 오류 (Server Error)">
                         {errorMessage}
                     </Alert>
                 )}
