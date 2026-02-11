@@ -82,6 +82,8 @@ type ExecutePanelProps = {
         overrideOptions?: {
             temperature?: number;
             topP?: number;
+            topK?: number;
+            includeThoughts?: boolean;
             maxTokens?: number;
             textFormat?: string;
             effort?: string;
@@ -184,6 +186,8 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
     const optionSummary = [
         { label: "temperature", value: form.values.overrideOptions.temperature ?? "-" },
         { label: "topP", value: form.values.overrideOptions.topP ?? "-" },
+        { label: "topK", value: form.values.overrideOptions.topK ?? "-" },
+        { label: "includeThoughts", value: form.values.overrideOptions.includeThoughts === null ? "-" : (form.values.overrideOptions.includeThoughts ? "Yes" : "No") },
         { label: "maxTokens", value: form.values.overrideOptions.maxTokens ?? "-" },
         { label: "textFormat", value: form.values.overrideOptions.textFormat || "-" },
         { label: "effort", value: form.values.overrideOptions.effort || "-" },
@@ -272,6 +276,8 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                     const options = {
                         temperature: values.overrideOptions.temperature ?? undefined,
                         topP: values.overrideOptions.topP ?? undefined,
+                        topK: values.overrideOptions.topK ?? undefined,
+                        includeThoughts: values.overrideOptions.includeThoughts ?? undefined,
                         maxTokens: values.overrideOptions.maxTokens ?? undefined,
                         textFormat: values.overrideOptions.textFormat || undefined,
                         effort: values.overrideOptions.effort || undefined,
@@ -681,9 +687,25 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                     <Group grow>
                         <TextInput label="Temperature" type="number" step={0.01} {...form.getInputProps("overrideOptions.temperature")} />
                         <TextInput label="Top P" type="number" step={0.01} {...form.getInputProps("overrideOptions.topP")} />
+                        <TextInput label="Top K" type="number" {...form.getInputProps("overrideOptions.topK")} />
                         <TextInput label="Max Tokens" type="number" {...form.getInputProps("overrideOptions.maxTokens")} />
                     </Group>
                     <Group grow>
+                        <Select
+                            label="Include Thoughts"
+                            data={[
+                                { value: "true", label: "Yes" },
+                                { value: "false", label: "No" },
+                            ]}
+                            value={form.values.overrideOptions.includeThoughts === null ? null : String(form.values.overrideOptions.includeThoughts)}
+                            onChange={(value) => {
+                                let nextValue: boolean | null = null;
+                                if (value === "true") nextValue = true;
+                                if (value === "false") nextValue = false;
+                                form.setFieldValue("overrideOptions.includeThoughts", nextValue);
+                            }}
+                            clearable
+                        />
                         <TextInput label="textFormat" {...form.getInputProps("overrideOptions.textFormat")} />
                         <Select
                             label="effort"

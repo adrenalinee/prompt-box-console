@@ -119,6 +119,8 @@ export default function WorkspaceSettingsPage() {
         initialValues: {
             temperature: "" as number | "",
             topP: "" as number | "",
+            topK: "" as number | "",
+            includeThoughts: undefined as boolean | undefined,
             maxTokens: "" as number | "",
             textFormat: "",
             effort: "",
@@ -134,6 +136,8 @@ export default function WorkspaceSettingsPage() {
         defaultOptionsForm.setValues({
             temperature: defaultOptionsData.temperature ?? "",
             topP: defaultOptionsData.topP ?? "",
+            topK: defaultOptionsData.topK ?? "",
+            includeThoughts: defaultOptionsData.includeThoughts ?? undefined,
             maxTokens: defaultOptionsData.maxTokens ?? "",
             textFormat: defaultOptionsData.textFormat ?? "",
             effort: defaultOptionsData.effort ?? "",
@@ -146,6 +150,8 @@ export default function WorkspaceSettingsPage() {
         mutationFn: (values: {
             temperature?: number;
             topP?: number;
+            topK?: number;
+            includeThoughts?: boolean;
             maxTokens?: number;
             textFormat?: string;
             effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
@@ -261,6 +267,8 @@ export default function WorkspaceSettingsPage() {
                             defaultOptionsMutation.mutate({
                                 temperature: values.temperature === "" ? undefined : values.temperature,
                                 topP: values.topP === "" ? undefined : values.topP,
+                                topK: values.topK === "" ? undefined : values.topK,
+                                includeThoughts: values.includeThoughts,
                                 maxTokens: values.maxTokens === "" ? undefined : values.maxTokens,
                                 textFormat: values.textFormat.trim() || undefined,
                                 effort: (values.effort || undefined) as "DEFAULT" | "LOW" | "MEDIUM" | "HIGH" | undefined,
@@ -282,6 +290,10 @@ export default function WorkspaceSettingsPage() {
                                     {...defaultOptionsForm.getInputProps("topP")}
                                 />
                                 <NumberInput
+                                    label="topK"
+                                    {...defaultOptionsForm.getInputProps("topK")}
+                                />
+                                <NumberInput
                                     label="maxTokens"
                                     {...defaultOptionsForm.getInputProps("maxTokens")}
                                 />
@@ -290,6 +302,28 @@ export default function WorkspaceSettingsPage() {
                                 <TextInput
                                     label="textFormat"
                                     {...defaultOptionsForm.getInputProps("textFormat")}
+                                />
+                                <Select
+                                    label="Include Thoughts"
+                                    data={[
+                                        { value: "true", label: "Yes" },
+                                        { value: "false", label: "No" },
+                                    ]}
+                                    value={
+                                        defaultOptionsForm.values.includeThoughts === null ||
+                                            defaultOptionsForm.values.includeThoughts === undefined
+                                            ? null
+                                            : defaultOptionsForm.values.includeThoughts
+                                                ? "true"
+                                                : "false"
+                                    }
+                                    onChange={(value) => {
+                                        let nextValue: boolean | null | undefined = undefined;
+                                        if (value === "true") nextValue = true;
+                                        if (value === "false") nextValue = false;
+                                        defaultOptionsForm.setFieldValue("includeThoughts", nextValue as any);
+                                    }}
+                                    clearable
                                 />
                                 <Select
                                     label="effort"

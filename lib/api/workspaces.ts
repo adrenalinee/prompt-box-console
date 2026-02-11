@@ -11,6 +11,8 @@ export type DefaultOptions = {
     workspaceId: string;
     temperature?: number;
     topP?: number;
+    topK?: number;
+    includeThoughts?: boolean;
     maxTokens?: number;
     textFormat?: string;
     effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";

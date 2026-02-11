@@ -75,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <HeaderActions workspaceId={workspaceId} />
                 </Group>
             </AppShell.Header>
-            <AppShell.Navbar p="md">
+            <AppShell.Navbar>
                 <AppShellNav workspaceId={workspaceId} />
             </AppShell.Navbar>
             <AppShell.Main>

@@ -45,6 +45,8 @@ export function useExecuteForm({
             overrideOptions: {
                 temperature: null,
                 topP: null,
+                topK: null,
+                includeThoughts: null,
                 maxTokens: null,
                 textFormat: "",
                 effort: "",
@@ -199,6 +201,8 @@ export function useExecuteForm({
         const fallback = {
             temperature: 1,
             topP: 0,
+            topK: 0,
+            includeThoughts: null,
             maxTokens: 3000,
             textFormat: "",
             effort: "LOW",
@@ -207,6 +211,8 @@ export function useExecuteForm({
         };
         form.setFieldValue("overrideOptions.temperature", defaultOptions?.temperature ?? fallback.temperature);
         form.setFieldValue("overrideOptions.topP", defaultOptions?.topP ?? fallback.topP);
+        form.setFieldValue("overrideOptions.topK", defaultOptions?.topK ?? fallback.topK);
+        form.setFieldValue("overrideOptions.includeThoughts", defaultOptions?.includeThoughts ?? fallback.includeThoughts);
         form.setFieldValue("overrideOptions.maxTokens", defaultOptions?.maxTokens ?? fallback.maxTokens);
         form.setFieldValue("overrideOptions.textFormat", defaultOptions?.textFormat ?? fallback.textFormat);
         form.setFieldValue("overrideOptions.effort", defaultOptions?.effort ?? fallback.effort);

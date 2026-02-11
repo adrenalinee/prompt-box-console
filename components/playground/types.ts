@@ -13,6 +13,8 @@ export type ExecuteFormValues = {
     overrideOptions: {
         temperature: number | null;
         topP: number | null;
+        topK: number | null;
+        includeThoughts: boolean | null;
         maxTokens: number | null;
         textFormat: string;
         effort: string;
