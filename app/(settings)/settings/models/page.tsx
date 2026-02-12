@@ -44,7 +44,7 @@ function SettingsModelsContent() {
         id: number;
         name?: string;
         modelKey?: string;
-        modelType?: "STANDARD" | "REASONING";
+        modelType?: "STANDARD" | "REASONING" | "UNKNOWN";
         contextWindow?: number;
         inputPrice?: number;
         outputPrice?: number;
@@ -128,7 +128,7 @@ function SettingsModelsContent() {
         mutationFn: (values: {
             name: string;
             modelKey: string;
-            modelType: "STANDARD" | "REASONING";
+            modelType: "STANDARD" | "REASONING" | "UNKNOWN";
             contextWindow?: number;
             inputPrice?: number;
             outputPrice?: number;
@@ -163,7 +163,7 @@ function SettingsModelsContent() {
             vendorId?: string;
             name?: string;
             modelKey?: string;
-            modelType?: "STANDARD" | "REASONING";
+            modelType?: "STANDARD" | "REASONING" | "UNKNOWN";
             contextWindow?: number;
             inputPrice?: number;
             outputPrice?: number;
@@ -367,7 +367,7 @@ function SettingsModelsContent() {
                         mutation.mutate({
                             name: values.name,
                             modelKey: values.modelKey,
-                            modelType: (values.modelType as "STANDARD" | "REASONING"),
+                            modelType: (values.modelType as "STANDARD" | "REASONING" | "UNKNOWN"),
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -383,12 +383,13 @@ function SettingsModelsContent() {
                             data={[
                                 { value: "STANDARD", label: "STANDARD" },
                                 { value: "REASONING", label: "REASONING" },
+                                { value: "UNKNOWN", label: "UNKNOWN" },
                             ]}
                             value={form.values.modelType}
                             onChange={(value) =>
                                 form.setFieldValue(
                                     "modelType",
-                                    (value as "STANDARD" | "REASONING") || "STANDARD",
+                                    (value as "STANDARD" | "REASONING" | "UNKNOWN") || "STANDARD",
                                 )
                             }
                         />
@@ -427,7 +428,7 @@ function SettingsModelsContent() {
                             vendorId: values.vendorId || undefined,
                             name: values.name || undefined,
                             modelKey: values.modelKey || undefined,
-                            modelType: (values.modelType as "STANDARD" | "REASONING") || undefined,
+                            modelType: (values.modelType as "STANDARD" | "REASONING" | "UNKNOWN") || undefined,
                             contextWindow: values.contextWindow ?? undefined,
                             inputPrice: values.inputPrice ?? undefined,
                             outputPrice: values.outputPrice ?? undefined,
@@ -448,12 +449,13 @@ function SettingsModelsContent() {
                             data={[
                                 { value: "STANDARD", label: "STANDARD" },
                                 { value: "REASONING", label: "REASONING" },
+                                { value: "UNKNOWN", label: "UNKNOWN" },
                             ]}
                             value={editForm.values.modelType}
                             onChange={(value) =>
                                 editForm.setFieldValue(
                                     "modelType",
-                                    (value as "STANDARD" | "REASONING") || "STANDARD",
+                                    (value as "STANDARD" | "REASONING" | "UNKNOWN") || "STANDARD",
                                 )
                             }
                         />
