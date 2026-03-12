@@ -21,6 +21,7 @@ import {
     IconBriefcase,
     IconDeviceDesktopAnalytics,
     IconHistory,
+    IconMessage2Code,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -62,11 +63,14 @@ export function LandingPage({ heroAction }: LandingPageProps) {
         <Container size="lg" py="xl">
             {/* Hero Section */}
             <Stack align="center" gap="xl" my={60} ta="center">
-                <Title
-                    order={1}
-                    size={rem(48)}
-                    fw={900}
-                >PromptBox</Title>
+                <Group justify="center" gap="sm">
+                    <IconMessage2Code size={48} stroke={1.5} />
+                    <Title
+                        order={1}
+                        size={rem(48)}
+                        fw={900}
+                    >PromptBox</Title>
+                </Group>
                 <Title
                     order={1}
                     size={rem(48)}

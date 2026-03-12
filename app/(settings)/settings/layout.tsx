@@ -2,6 +2,7 @@
 
 import React from "react";
 import { AppShell, Group, Text, Burger, Box } from "@mantine/core";
+import { IconMessage2Code } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { SettingsNav } from "@/components/layout/SettingsNav";
 import Link from "next/link";
@@ -25,9 +26,12 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <Text component={Link} href="/" fw={700}>
-                            PromptBox
-                        </Text>
+                        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }} className="hover:opacity-80">
+                            <Group gap={6}>
+                                <IconMessage2Code size={22} stroke={1.8} />
+                                <Text fw={700}>PromptBox</Text>
+                            </Group>
+                        </Link>
                         <Text fw={600} c="dimmed">
                             Settings
                         </Text>

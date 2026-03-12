@@ -2,7 +2,7 @@
 
 import React from "react";
 import {AppShell, Group, Text, Burger, Box, Select, ActionIcon, Tooltip} from "@mantine/core";
-import { IconMenu2 } from "@tabler/icons-react";
+import { IconMenu2, IconMessage2Code } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { AppShellNav } from "@/components/layout/AppShellNav";
 import { HeaderActions } from "@/components/layout/HeaderActions";
@@ -49,9 +49,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Group h="100%" px="md" justify="space-between">
                     <Group gap="sm">
                         <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <Text fw={700} component={Link} href="/" className="hover:opacity-80">
-                            PromptBox
-                        </Text>
+                        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }} className="hover:opacity-80">
+                            <Group gap={6}>
+                                <IconMessage2Code size={22} stroke={1.8} />
+                                <Text fw={700}>PromptBox</Text>
+                            </Group>
+                        </Link>
                         <Tooltip label="워크스페이스">
                             <Select
                                 data={workspaceOptions}
