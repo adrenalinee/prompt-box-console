@@ -142,6 +142,41 @@ pnpm run lint
 
 ---
 
+## URL 상태 유지 원칙
+
+**브라우저 주소창의 URL을 복사해 새 탭에서 열거나 새로고침을 해도, 동일한 화면 상태가 복원되어야 합니다.**
+
+- 편집 화면에서 작성 중인 폼 내용 등 임시 상태는 예외입니다.
+- 사용자의 액션으로 초기 상태와 달라질 수 있는 모든 UI 상태는 URL query parameter에 반영합니다.
+  - 예: 선택된 탭, 필터/검색 조건, 선택된 모델·API 키 등
+- 상태가 변경될 때마다 `router.replace()`로 URL을 갱신합니다 (`router.push()`는 히스토리가 쌓이므로 사용하지 않음).
+- 페이지 마운트 시 URL query parameter를 읽어 초기 상태로 설정합니다.
+
+**구현 패턴 (Next.js App Router Client Component):**
+
+```tsx
+const searchParams = useSearchParams();
+const pathname = usePathname();
+const router = useRouter();
+
+const [selectedId, setSelectedId] = React.useState(searchParams.get("id") ?? "");
+
+// 상태 → URL 동기화
+React.useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (selectedId) {
+        params.set("id", selectedId);
+    } else {
+        params.delete("id");
+    }
+    if (params.toString() !== searchParams.toString()) {
+        router.replace(`${pathname}?${params.toString()}`);
+    }
+}, [selectedId, pathname, router, searchParams]);
+```
+
+---
+
 ## 코딩 컨벤션
 
 - **API 호출**: 반드시 `lib/api/` 내의 함수를 사용하고, `apiFetch`를 직접 호출하지 않습니다.

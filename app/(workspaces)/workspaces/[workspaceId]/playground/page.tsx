@@ -44,6 +44,9 @@ export default function PlaygroundPage() {
 
     const [selectedPromptId, setSelectedPromptId] = React.useState<string>(initialPromptId);
     const [selectedRefId, setSelectedRefId] = React.useState<string>(initialRefId);
+    const [selectedVendorId, setSelectedVendorId] = React.useState<string | null>(null);
+    const [selectedModelId, setSelectedModelId] = React.useState<string>(initialModelId);
+    const [selectedApiKeyId, setSelectedApiKeyId] = React.useState<string>(initialApiKeyId);
     const lastPromptIdRef = React.useRef<string>(initialPromptId);
     const executePanelRef = React.useRef<ExecutePanelRef>(null);
 
@@ -62,12 +65,24 @@ export default function PlaygroundPage() {
             params.delete("refId");
         }
 
+        if (selectedModelId) {
+            params.set("modelId", selectedModelId);
+        } else {
+            params.delete("modelId");
+        }
+
+        if (selectedApiKeyId) {
+            params.set("apiKeyId", selectedApiKeyId);
+        } else {
+            params.delete("apiKeyId");
+        }
+
         const newQuery = params.toString();
         const currentQuery = searchParams.toString();
         if (newQuery !== currentQuery) {
             router.replace(`${pathname}?${newQuery}`);
         }
-    }, [selectedPromptId, selectedRefId, pathname, router, searchParams]);
+    }, [selectedPromptId, selectedRefId, selectedModelId, selectedApiKeyId, pathname, router, searchParams]);
 
     React.useEffect(() => {
         if (lastPromptIdRef.current && lastPromptIdRef.current !== selectedPromptId) {
@@ -112,9 +127,6 @@ export default function PlaygroundPage() {
             }),
     });
 
-    const [selectedVendorId, setSelectedVendorId] = React.useState<string | null>(null);
-    const [selectedModelId, setSelectedModelId] = React.useState<string>(initialModelId);
-    const [selectedApiKeyId, setSelectedApiKeyId] = React.useState<string>(initialApiKeyId);
 
     const { data: models = [], isLoading: modelsLoading, isError: modelsError, error: modelsErrorDetail } = useQuery({
         queryKey: workspaceId
