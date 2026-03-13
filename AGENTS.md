@@ -1,270 +1,154 @@
-# HANDOFF PACKET — mostPrompt Web MVP
+# AGENTS.md — mostprompt-web
 
-Stack: Next.js(App Router) + TypeScript + Tailwind CSS + Mantine 8.x(최신버전) + React Query
+## 프로젝트 개요
 
-# 0) 개발 시작 전에 사용자(동성 신)가 결정해야 하는 것
-1.API Base URL
-http://localhost:8080
+**mostprompt-web**은 LLM 프롬프트를 관리·실행·테스트할 수 있는 웹 콘솔 애플리케이션입니다.
+백엔드 API 서버(Spring Boot 기반)와 연동하여 워크스페이스별로 프롬프트, LLM 모델, API 키, 실행 로그 등을 관리합니다.
 
-- api spec: /api-docs
-- swagger: /swagger-ui
+---
 
-2.Workspace 처리 방식
-- root('/') 랜딩에서 GET /workspaces 호출 → 워크스페이스 선택
-- 선택 시 '/workspaces/{workspaceId}/playground'로 이동
+## 기술 스택
 
-3.언어
-- 옵션: UI 한국어/영어
-- 기본값: 한국어(라벨만). 내부 키/코드에는 영향 없음.
+| 영역 | 기술 |
+|------|------|
+| 프레임워크 | Next.js 16 (App Router) |
+| 언어 | TypeScript 5 |
+| UI 라이브러리 | Mantine v8, @tabler/icons-react |
+| 상태/데이터 페칭 | TanStack React Query v5 |
+| 인증 | next-auth v5 (Google OAuth) |
+| 패키지 매니저 | pnpm |
+| 스타일 | Tailwind CSS v4, postcss-preset-mantine |
 
-위 4개는 "결정 없으면 기본값으로 진행" 가능. Codex는 구현 중 백엔드 코드를 보고 자동으로 맞추면 됨.
+---
 
-# 1) 핵심 원칙
-- mostPrompt MVP의 프론트 목표는 3축 관통:
-   1.Prompts(생성/목록/상세/스냅샷 생성)
-   2.Playground(실행)
-   3.Logs(목록/상세)
-- Auth 없음(익명 사용자 1명), workspace 1개 가정.
-- API Key는 절대 평문 재노출 금지: 입력은 "등록/수정 시에만", 이후에는 마스킹만 표시.
-
-# 2) Mantine + Tailwind 결합 규칙(필수)
-## 2.1 Mantine은 styles.layer.css로 import
-Next.js는 스타일 import order가 보장되지 않을 수 있으므로 Mantine 문서가 CSS layers 사용을 권장함. 또한 styles.css와 styles.layer.css를 동시에 import 하면 안 됨.
-- root에서 예:
-   @mantine/core/styles.layer.css
-   @mantine/dates/styles.layer.css 등
-
-## 2.2 globals.css에서 layer 순서 고정
-Tailwind base → mantine → tailwind utilities 순으로. Mantine 문서에도 layer order 예시가 있음.
-
-app/globals.css
-```css
-@layer base, mantine, components, utilities;
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-
-## 2.3 Server Components 주의
-Mantine 컴포넌트는 server component로 직접 쓰기 어렵고(내부적으로 useContext), 패키지 엔트리포인트가 'use client'인 구조임. 따라서 Provider/레이아웃 구성에 client boundary를 명확히 둔다.
-
-# 3) 프로젝트 스캐폴딩 & 패키지
-## 3.1 생성
-- Next.js App Router + TS + Tailwind + ESLint
-
-## 3.2 의존성(권장)
-- @mantine/core @mantine/hooks
-- @mantine/form (폼)
-- @mantine/notifications (토스트)
-- @mantine/modals (확인/생성 모달)
-- @mantine/dates (로그 필터 기간)
-- @mantine/code-highlight (output/options 표시)
-- @tabler/icons-react
-- @tanstack/react-query
-
-# 4) 폴더 구조(권장)
-```pgsql
-app/
-  layout.tsx
-  providers.tsx
-  globals.css
-
-  (root)/
-    page.tsx
-
-  (workspaces)/
-    workspaces/
-      [workspaceId]/
-        layout.tsx
-        page.tsx
-        prompts/
-          page.tsx
-          new/
-            page.tsx
-          [promptId]/
-            page.tsx
-        playground/
-          page.tsx
-        logs/
-          page.tsx
-          [callId]/
-            page.tsx
-        settings/
-          api-keys/
-            page.tsx
-          models/
-            page.tsx
-
-  (settings)/
-    settings/
-      layout.tsx
-      page.tsx
-      workspaces/
-        page.tsx
-      vendors/
-        page.tsx
-      api-keys/
-        page.tsx
-      models/
-        page.tsx
-      prompts/
-        page.tsx
-      logs/
-        page.tsx
-
-lib/
-  api/
-    client.ts        # baseUrl, fetch wrapper, error normalize
-    prompts.ts
-    llmCalls.ts
-    settings.ts
-  query/
-    keys.ts
-    queryClient.ts
-
-components/
-  layout/
-    AppShellNav.tsx
-    HeaderActions.tsx
-  prompts/
-    PromptTable.tsx
-    PromptEditor.tsx
-    SnapshotTable.tsx
-    RefTable.tsx
-  playground/
-    ExecutePanel.tsx
-    OutputPanel.tsx
-  logs/
-    LogTable.tsx
-    LogDetail.tsx
+## API 서버
 
 ```
+Base URL:  http://localhost:8080
+API Spec:  http://localhost:8080/api-docs
+Swagger:   http://localhost:8080/swagger-ui
+```
 
-# 5) 레이아웃 구현 가이드
-## 5.1 Root Layout: styles import + Providers
-- app/layout.tsx에서 Mantine styles.layer.css import + globals.css import
-- Providers는 client 컴포넌트로 분리: MantineProvider + ReactQuery + Notifications + Modals
+### 환경 설정
 
-## 5.2 Workspaces Layout: AppShell (워크스페이스용)
-Mantine AppShell로 헤더/네비/메인 구성. AppShell은 header/navbar/aside/footer 레이아웃 패턴을 제공.
-- 네비 메뉴:
-  - Prompts
-  - Playground
-  - Logs
-  - Settings(API Keys, Models)
-- 헤더 우측: 기어 아이콘 → '/settings' 이동
+- `SERVER_PHASE` 환경변수로 API URL이 결정됩니다 (`config/app-config.tsx`).
+  - `local` → `http://localhost:8080`
+  - `dev` → GCP Cloud Run (dev 서버)
+- `.env.local`의 `SERVER_PHASE=local` 값을 확인하세요.
 
-## 5.3 Settings Layout: AppShell (전역 관리용)
-전역 관리용 사이드바 제공. 메뉴:
-- Workspaces
-- Vendors
-- API Keys
-- Models
-- Prompts
-- Logs
+### API 호출 방식
 
-# 6) 라우팅(IA) & 페이지별 요구사항
-## 6.0 Root (Landing)
-- '/'에서 워크스페이스 선택 Select 제공
-- 선택 시 '/workspaces/{workspaceId}/playground' 이동
+- `lib/api/client.ts`의 `apiFetch<T>()` 함수를 통해 모든 API 요청을 처리합니다.
+- 인증: `next-auth` 세션의 `sessionToken` (Google ID Token)을 `Authorization: Bearer` 헤더로 전달합니다.
+- 401 응답 시 자동으로 `/login`으로 리다이렉트합니다.
+- 페이지네이션 응답 타입: `PageResponse<T> = { items, page, size, totalElements, totalPages }`
+- LLM 스트리밍: `executeCallStream()` 함수 (Server-Sent Events 방식)
 
-## 6.1 /prompts (목록)
-경로: '/workspaces/{workspaceId}/prompts'
-목표: Prompt 목록 + "새 Prompt 만들기" 버튼
-- Mantine: Table, ScrollArea, TextInput(검색), Button
-- 항목 표시: name, latestRef, updatedAt(가능하면)
+### API 모듈 (`lib/api/`)
 
-## 6.2 /prompts/new (생성)
-경로: '/workspaces/{workspaceId}/prompts/new'
-목표: Prompt 생성 시 main branch + snapshot v1 생성 (백엔드 정책 그대로)
-- 입력: prompt name, instructions(초기)
-- 성공 시 /prompts/[promptId] 이동 + toast
+| 파일 | 담당 도메인 |
+|------|-------------|
+| `client.ts` | 공통 fetch 유틸, 에러 핸들링, 타입 |
+| `workspaces.ts` | 워크스페이스 CRUD, 기본 옵션 |
+| `prompts.ts` | 프롬프트 CRUD, Refs(브랜치/태그), Additional Inputs |
+| `settings.ts` | LLM Vendor, Model, API Key CRUD |
+| `llmCalls.ts` | LLM 실행(동기/스트리밍), 실행 로그 조회/취소 |
 
-## 6.3 /prompts/[promptId] (상세: Tabs 권장)
-경로: '/workspaces/{workspaceId}/prompts/[promptId]'
-Tabs: Editor / Snapshots / Refs
-- Editor 탭:
-  - instructions 편집 → "저장"은 새 snapshot 생성으로 동작(선형 버전)
-- Snapshots 탭:
-  - version desc 목록
-  - "이 버전으로 Playground 실행" 버튼(Playground로 이동하며 snapshotId 전달)
-- Refs 탭:
-  - BRANCH/TAG 목록
-  - 생성 모달
-  - TAG는 immutable: UI에서 수정/이동 버튼 노출 금지
-  - BRANCH 이동: target snapshot 선택 후 PATCH 호출
+---
 
-## 6.4 /playground
-경로: '/workspaces/{workspaceId}/playground'
-목표: ref/snapshot/raw 중 하나로 실행하고 output 표시 + callLogId 링크
-- 실행 소스 선택: SegmentedControl(REF, SNAPSHOT, RAW)
-- 모델/키 선택: vendor/model/apiKey select
-- overrideOptions: JSON 입력(간단히 Textarea 가능) → 서버에 그대로 전달
-- 실행 결과: outputText 표시 + "Logs 상세 이동" 링크
+## 인증
 
-## 6.5 /logs, /logs/[callId]
-경로: '/workspaces/{workspaceId}/logs', '/workspaces/{workspaceId}/logs/[callId]'
-- 목록: 필터(promptId, modelId, status, from/to) + table
-- 상세: InputItems/OutputItems/Resolved options/모델정보
-  - output/options는 code highlight + CopyButton
+- **Google OAuth**만 지원합니다.
+- `@mystix.ai` 도메인 계정만 로그인 허용 (`auth.ts`의 `signIn` 콜백 참조).
+- 로그인 페이지: `/login`
+- 미인증 상태에서 `/`(루트)는 접근 허용, 나머지 경로는 인증 필요.
 
-## 6.6 /settings/api-keys, /settings/models
-경로: '/workspaces/{workspaceId}/settings/api-keys', '/workspaces/{workspaceId}/settings/models'
-- API Keys: 목록(마스킹) + 등록/수정(평문 입력은 여기서만)
-- Models: vendor/modelKey 목록(메타 표시)
+---
 
-## 6.7 전역 Settings (관리용)
-경로: '/settings/*'
-- Workspaces, Vendors, API Keys, Models, Prompts, Logs 관리 메뉴
+## 디렉토리 구조
 
-# 7) API 통합 지침(필수)
-## 7.1 Base URL
-- NEXT_PUBLIC_API_BASE_URL 환경변수 사용
-- lib/api/client.ts에서 fetch wrapper 구현:
-  - JSON parse
-  - HTTP 에러를 { status, code?, message }로 normalize
-  - 에러 메시지를 toast로 표시(Notifications)
+```
+mostprompt-web/
+├── app/
+│   ├── (settings)/              # 전역 설정 라우트 그룹
+│   ├── (workspaces)/
+│   │   └── workspaces/[workspaceId]/
+│   │       ├── layout.tsx       # 워크스페이스 레이아웃 (사이드바 등)
+│   │       ├── prompts/         # 프롬프트 목록, 상세, 편집
+│   │       ├── playground/      # LLM 실행 테스트
+│   │       ├── logs/            # LLM 호출 로그
+│   │       └── settings/        # 워크스페이스 설정
+│   │           ├── workspace/   # 기본 정보, 기본 옵션
+│   │           ├── api-keys/    # LLM API 키 관리
+│   │           ├── models/      # LLM 모델 관리
+│   │           └── vendors/     # LLM 벤더 관리
+│   ├── api/                     # Next.js API Routes
+│   ├── login/                   # 로그인 페이지
+│   ├── page.tsx                 # 루트 랜딩 페이지
+│   ├── layout.tsx               # 전역 레이아웃 (Mantine provider 등)
+│   ├── providers.tsx            # QueryClient, MantineProvider 등
+│   └── theme.ts                 # Mantine 테마 설정
+├── components/
+│   ├── layout/                  # AppShellNav, SettingsNav, HeaderActions 등
+│   ├── playground/              # ModelSelector 등 Playground 전용 컴포넌트
+│   ├── prompts/                 # 프롬프트 관련 컴포넌트
+│   └── logs/                   # 로그 관련 컴포넌트
+├── config/
+│   └── app-config.tsx           # SERVER_PHASE, API Base URL 결정 로직
+├── lib/
+│   ├── api/                     # API 호출 함수 모음
+│   └── query/                   # TanStack Query keys
+├── types/                       # 전역 TypeScript 타입 정의
+├── auth.ts                      # next-auth 설정
+├── middleware.ts                # 인증 미들웨어
+└── .env.local                   # 로컬 환경변수 (gitignore)
+```
 
-## 7.2 Workspace 부팅 로직
-- root('/')에서 GET /workspaces 후 사용자 선택
-- '/workspaces/{workspaceId}/*'에서 라우트 param 기반으로 workspaceId 사용
+---
 
-## 7.3 React Query 키 설계
-- workspaces, prompts(workspaceId), prompt(promptId), snapshots(promptId), refs(promptId)
-- logs(workspaceId, filters), log(callId), models(workspaceId), apiKeys(workspaceId)
+## 주요 데이터 모델
 
-## 7.4 보안
-- apiKey value는 응답 DTO에 포함되더라도 화면에서 마스킹 처리
-- 콘솔 로그/에러에 key 값 출력 금지
+### Workspace
+```typescript
+{ id: string; name: string; description?: string; defaultModelId?: number }
+```
 
-# 8) UX/정책 강제(프론트에서 보조적으로)
-- TAG 수정/이동 UI 제공 금지(immutable)
-- "snapshot 저장"은 항상 새 version 생성
-- vendor 일치 검증은 서버가 최종 책임이지만, 가능하면 UI에서 model/vendor와 key/vendor mismatch 시 경고 표시
+### Prompt / PromptRef
+- `Prompt`: 프롬프트 메타정보
+- `PromptRef`: 브랜치 또는 태그 (type: `"BRANCH" | "TAG"`)
+- `AdditionalInputItem`: ref에 연결된 추가 입력 항목 (role: `USER | ASSISTANT | SYSTEM | DEVELOPER`)
 
-# 9) 구현 순서(이대로 하면 막힘 적음)
-1.스캐폴딩 + styles.layer + Providers 완성
-2.루트 랜딩 + 워크스페이스 선택
-3./workspaces/{id} AppShell + prompts/playground/logs
-4./workspaces/{id}/settings(api keys, models)
-5./settings (전역 관리) 확장
+### Vendor / Model / ApiKey
+- LLM 벤더, 모델(`modelType: STANDARD | REASONING | UNKNOWN`), API 키
 
-# 10) Definition of Done (완료 기준)
-- Prompts:
-  - 생성/목록/상세/새 snapshot 생성 동작
-  - refs 탭에서 branch 생성/이동 가능, tag는 읽기전용
-- Playground:
-  - ref/snapshot/raw 중 하나로 실행 가능
-  - output 표시 + callLogId로 logs 상세 이동
-- Logs:
-  - 목록 필터 + 상세에서 input/output/options 확인 가능
-- Settings:
-  - API key 등록/수정 가능(마스킹), 모델 목록 확인 가능
-- Mantine+Tailwind:
-  - styles.layer.css 사용, globals layer order 적용, 스타일 충돌 없음(기본 UI 깨짐 없어야 함)
+### CallLog / CallLogDetail
+- LLM 호출 로그 (`status: PENDING | RUNNING | SUCCESS | ERROR | TIMEOUT | CANCELLED`)
+- 스트리밍 이벤트 타입: `LlmStreamEvent` (response.created, response.message.delta 등)
 
-# 11) Codex 작업 지시(실행용)
-- 백엔드 코드/Swagger를 확인해서 실제 endpoint path/DTO에 맞춰 lib/api/*를 맞출 것.
-- 먼저 "관통 시나리오(프롬프트 생성 → snapshot → playground 실행 → logs 확인)"가 되는 최소 UI를 만들고, 그 다음 Refs/Settings를 확장할 것.
-- Mantine은 styles.layer.css만 사용하고 styles.css와 혼용 금지.
+---
+
+## 개발 명령어
+
+```bash
+# 개발 서버 시작 (Next.js 16, localhost:3000)
+pnpm run dev
+
+# 빌드
+pnpm run build
+
+# 린트
+pnpm run lint
+```
+
+---
+
+## 코딩 컨벤션
+
+- **API 호출**: 반드시 `lib/api/` 내의 함수를 사용하고, `apiFetch`를 직접 호출하지 않습니다.
+- **새 API 엔드포인트 연동**: API 스펙은 `http://localhost:8080/api-docs` 또는 Swagger UI에서 확인합니다.
+- **데이터 패칭**: TanStack Query (`useQuery`, `useMutation`)를 사용합니다. Query key는 `lib/query/keys.ts`에서 관리합니다.
+- **UI 컴포넌트**: Mantine v8 컴포넌트를 우선 사용합니다. 아이콘은 `@tabler/icons-react`를 사용합니다.
+- **에러/알림**: `@mantine/notifications`의 `showNotification()`을 사용합니다.
+- **모달**: `@mantine/modals`를 사용합니다.
+- **경로 alias**: `@/`는 프로젝트 루트를 가리킵니다 (`tsconfig.json` 참조).
+- **Server vs Client**: Next.js App Router의 Server Component / Client Component 구분을 준수합니다. 인터랙티브 컴포넌트는 `"use client"`를 선언합니다.
