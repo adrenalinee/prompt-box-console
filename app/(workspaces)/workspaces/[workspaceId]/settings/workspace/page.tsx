@@ -202,6 +202,7 @@ export default function WorkspaceSettingsPage() {
             {/* Workspace Info Section */}
             <Stack>
                 <Title order={3}>Workspace Information</Title>
+                <Alert>워크스페이스의 기본 환경을 설정합니다.</Alert>
                 <Paper withBorder p="md">
                     <form
                         onSubmit={workspaceForm.onSubmit((values) =>
@@ -248,10 +249,10 @@ export default function WorkspaceSettingsPage() {
             {/* Default Options Section */}
             <Stack>
                 <Title order={3}>Default Options</Title>
-                <Text c="dimmed" size="sm">
+                <Alert>
                     Playground 실행 시 기본으로 적용되는 LLM 옵션을 설정합니다. 필요하면 실행 시
                     개별 요청에서 값을 덮어쓸 수 있습니다.
-                </Text>
+                </Alert>
 
                 {isDefaultOptionsError && (
                     <Alert color="red" title="오류" mb="sm">

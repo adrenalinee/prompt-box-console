@@ -104,6 +104,7 @@ export default function ModelsPage() {
                     생성 불가
                 </Button>
             </Group>
+            <Alert>현재 사용가능한 Model 목록입니다.</Alert>
             <Group grow>
                 <Select
                     label="Vendor"

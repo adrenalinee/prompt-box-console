@@ -77,6 +77,7 @@ export default function WorkspaceVendorsPage() {
                     생성 불가
                 </Button>
             </Group>
+            <Alert>현재 사용가능한 Vendor 목록입니다.</Alert>
             <Group grow>
                 <TextInput
                     label="Name"

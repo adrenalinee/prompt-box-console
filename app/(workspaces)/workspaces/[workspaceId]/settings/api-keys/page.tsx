@@ -211,6 +211,7 @@ export default function ApiKeysPage() {
                     새 API Key
                 </Button>
             </Group>
+            <Alert>워크스페이스 안에서만 사용할 수 있는 API Key를 관리합니다.</Alert>
 
             <Group grow>
                 <Select

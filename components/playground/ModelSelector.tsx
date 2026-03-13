@@ -54,7 +54,7 @@ export function ModelSelector({
     const selectedKeyLabel = selectedKey
         ? `${vendorMap.get(selectedKey.vendorId) ?? selectedKey.vendorId} / ${selectedKey.name || selectedKey.id
         }`
-        : "-";
+        : <Text c="orange">API Key 가 선택되지 않았습니다.</Text>;
 
     // Filtering logic for the modal
     const filteredModels = React.useMemo(() => {
