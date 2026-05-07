@@ -216,10 +216,16 @@ export const CompactExecutePanel = React.forwardRef<CompactExecutePanelRef, Exec
             summary: values.overrideOptions.summary || undefined,
         };
         const hasOptions = Object.values(options).some((value) => value !== undefined);
+        const effectiveBaselineItems = refBaselineInputs.filter(
+            (item) => item.message.trim().length > 0,
+        );
+        const inputItemsUnchanged =
+            JSON.stringify(effectiveItems) === JSON.stringify(effectiveBaselineItems);
         const useRef =
             !!values.promptId &&
             !!values.refId &&
-            values.instructions.trim() === refBaselineInstructions.trim();
+            values.instructions.trim() === refBaselineInstructions.trim() &&
+            inputItemsUnchanged;
 
         onExecute({
             refId: useRef ? Number(values.refId) : undefined,
