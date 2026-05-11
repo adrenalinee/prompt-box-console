@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { ActionIcon, Button, Divider, Grid, Group, Paper, Switch, Text, Title, Tooltip } from "@mantine/core";
-import { IconPlus, IconPlayerPlay, IconArrowsDiff } from "@tabler/icons-react";
+import { Button, Divider, Grid, Group, Switch, Text } from "@mantine/core";
+import { IconPlus, IconPlayerPlay } from "@tabler/icons-react";
 import { CompareColumnContainer } from "./CompareColumnContainer";
 import type { CompactExecutePanelRef } from "./CompactExecutePanel";
 import type { ExecuteFormValues } from "../types";
@@ -61,7 +61,7 @@ export function CompareSessionManager({
             ];
             setSessions(defaults);
         }
-    }, [initialSessionState]);
+    }, [initialSessionState, sessions.length]);
 
     const handleAddColumn = () => {
         setSessions((prev) => [

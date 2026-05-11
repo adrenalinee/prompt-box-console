@@ -9,7 +9,7 @@ type HeaderActionsProps = {
     workspaceId: string;
 };
 
-export function HeaderActions({ workspaceId }: HeaderActionsProps) {
+export function HeaderActions({}: HeaderActionsProps) {
     return (
         <Group gap="xs">
             <ServerPhase />

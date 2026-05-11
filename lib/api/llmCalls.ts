@@ -92,8 +92,7 @@ export type LlmStreamEvent =
         outputTokens?: number;
         reasoningTokens?: number;
         totalTokens?: number;
-    }
-    | { type: string;[key: string]: any };
+    };
 
 export type ExecuteStreamHandlers = {
     onEvent?: (event: LlmStreamEvent) => void;
@@ -201,8 +200,7 @@ export async function executeCallStream(
     let response: Response;
     try {
         const session = await getSession();
-        // eslint-disable-next-line
-        const token = (session as any)?.sessionToken;
+        const token = (session as { sessionToken?: string } | null)?.sessionToken;
 
         const headers: Record<string, string> = {
             "Content-Type": "application/json",
@@ -284,9 +282,9 @@ export async function executeCallStream(
         }
         const dataText = dataLines.join("\n");
         const parsed = dataText ? parseJsonSafe(dataText) : null;
-        const eventPayload: LlmStreamEvent =
+        const eventPayload: Record<string, unknown> =
             parsed && typeof parsed === "object"
-                ? parsed
+                ? { ...(parsed as Record<string, unknown>) }
                 : { type: eventName || "message.delta", delta: dataText || undefined };
         if (!eventPayload.type && eventName) {
             eventPayload.type = eventName;
@@ -294,7 +292,7 @@ export async function executeCallStream(
         if (!eventPayload.type) {
             eventPayload.type = "message.delta";
         }
-        handlers.onEvent?.(eventPayload);
+        handlers.onEvent?.(eventPayload as LlmStreamEvent);
     };
 
     while (true) {

@@ -35,6 +35,7 @@ export function RefTable({ refs, onCreate, defaultBranchRefId }: RefTableProps) 
         if (refOptions.length && !refOptions.find((opt) => opt.value === createForm.values.fromRefId)) {
             createForm.setFieldValue("fromRefId", refOptions[0].value);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refOptions]);
 
     return (

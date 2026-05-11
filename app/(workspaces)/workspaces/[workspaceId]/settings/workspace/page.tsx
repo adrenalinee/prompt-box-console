@@ -75,6 +75,7 @@ export default function WorkspaceSettingsPage() {
                 defaultModelId: workspaceData.defaultModelId ? String(workspaceData.defaultModelId) : null,
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [workspaceData]);
 
     const workspaceMutation = useMutation({
@@ -144,6 +145,7 @@ export default function WorkspaceSettingsPage() {
             verbosity: defaultOptionsData.verbosity ?? "",
             summary: defaultOptionsData.summary ?? "",
         });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [defaultOptionsData]);
 
     const defaultOptionsMutation = useMutation({
@@ -322,7 +324,7 @@ export default function WorkspaceSettingsPage() {
                                         let nextValue: boolean | null | undefined = undefined;
                                         if (value === "true") nextValue = true;
                                         if (value === "false") nextValue = false;
-                                        defaultOptionsForm.setFieldValue("includeThoughts", nextValue as any);
+                                        defaultOptionsForm.setFieldValue("includeThoughts", nextValue);
                                     }}
                                     clearable
                                 />

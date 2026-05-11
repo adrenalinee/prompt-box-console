@@ -25,7 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             }
             return !!auth?.user
         },
-        async signIn({ user, account, profile }) {
+        async signIn({ profile }) {
             // 로그인 시도 시 이메일 도메인 체크
             const allowedDomain = "mystix.ai"; // 허용할 도메인
 

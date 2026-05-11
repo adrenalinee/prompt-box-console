@@ -13,11 +13,14 @@ import {
     Stack,
     Text,
     Textarea,
-    TextInput, UnstyledButton,
+    TextInput,
+    Tooltip,
+    UnstyledButton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import {
-    IconAdjustments, IconChevronDown, IconChevronRight,
+    IconChevronDown,
+    IconChevronRight,
     IconDotsVertical,
 } from "@tabler/icons-react";
 import type { AdditionalInputItem, Prompt, PromptRef } from "@/lib/api/prompts";
@@ -134,6 +137,9 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
 
     const [instructionsOpen, { toggle: toggleInstructions }] = useDisclosure(true);
     const [inputItemsOpen, { toggle: toggleInputItems }] = useDisclosure(true);
+    const [collapsedInputItemIndexes, setCollapsedInputItemIndexes] = React.useState<Set<number>>(
+        () => new Set(),
+    );
 
     const {
         form,
@@ -161,6 +167,48 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
     React.useImperativeHandle(ref, () => ({
         getValues: () => form.values,
     }));
+
+    React.useEffect(() => {
+        setCollapsedInputItemIndexes((current) => {
+            const next = new Set<number>();
+            current.forEach((index) => {
+                if (index < form.values.inputItems.length) {
+                    next.add(index);
+                }
+            });
+            return next.size === current.size ? current : next;
+        });
+    }, [form.values.inputItems.length]);
+
+    const toggleInputItemCollapsed = React.useCallback((index: number) => {
+        setCollapsedInputItemIndexes((current) => {
+            const next = new Set(current);
+            if (next.has(index)) {
+                next.delete(index);
+            } else {
+                next.add(index);
+            }
+            return next;
+        });
+    }, []);
+
+    const removeInputItem = React.useCallback(
+        (index: number) => {
+            form.removeListItem("inputItems", index);
+            setCollapsedInputItemIndexes((current) => {
+                const next = new Set<number>();
+                current.forEach((itemIndex) => {
+                    if (itemIndex < index) {
+                        next.add(itemIndex);
+                    } else if (itemIndex > index) {
+                        next.add(itemIndex - 1);
+                    }
+                });
+                return next;
+            });
+        },
+        [form],
+    );
 
     const promptForm = useForm({
         initialValues: {
@@ -251,7 +299,7 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                     const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
                     sessionStorage.removeItem(key);
                 }
-            } catch (e) { }
+            } catch { }
         }
     };
 
@@ -392,7 +440,7 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                                 try {
                                     const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
                                     sessionStorage.removeItem(key);
-                                } catch (e) { }
+                                } catch { }
 
                                 // Invalidate queries to fetch fresh data
                                 queryClient.invalidateQueries({ queryKey: queryKeys.refs(form.values.promptId) });
@@ -455,50 +503,72 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                                         message가 비어 있으면 안됩니다. 필요없는 input item이라면 삭제해주세요.
                                     </Alert>
                                 )}
-                                {form.values.inputItems.map((item, index) => (
-                                    <Paper key={`input-${index}`} withBorder p="sm">
-                                        <Group justify="space-between" align="center">
-                                            <Select
-                                                label="Role"
-                                                data={[
-                                                    { value: "USER", label: "USER" },
-                                                    { value: "ASSISTANT", label: "ASSISTANT" },
-                                                    { value: "SYSTEM", label: "SYSTEM" },
-                                                    { value: "DEVELOPER", label: "DEVELOPER" },
-                                                ]}
-                                                w={160}
-                                                {...form.getInputProps(`inputItems.${index}.role`)}
-                                            />
-                                            <Menu shadow="md" position="bottom-end">
-                                                <Menu.Target>
-                                                    <ActionIcon variant="light" type="button">
-                                                        <IconDotsVertical size={16} />
-                                                    </ActionIcon>
-                                                </Menu.Target>
-                                                <Menu.Dropdown>
-                                                    <Menu.Item
-                                                        color="red"
-                                                        disabled={form.values.inputItems.length === 1}
-                                                        onClick={() => form.removeListItem("inputItems", index)}
-                                                        component="button"
-                                                        type="button"
-                                                    >
-                                                        삭제
-                                                    </Menu.Item>
-                                                </Menu.Dropdown>
-                                            </Menu>
-                                        </Group>
-                                        <Textarea
-                                            label="Message"
-                                            minRows={3}
-                                            autosize
-                                            value={item.message}
-                                            onChange={(event) =>
-                                                updateInputMessage(index, event.currentTarget.value)
-                                            }
-                                        />
-                                    </Paper>
-                                ))}
+                                {form.values.inputItems.map((item, index) => {
+                                    const isItemCollapsed = collapsedInputItemIndexes.has(index);
+
+                                    return (
+                                        <Paper key={`input-${index}`} withBorder p="sm">
+                                            <Group justify="space-between" align="center" mb={isItemCollapsed ? 0 : "xs"}>
+                                                <Select
+                                                    label="Role"
+                                                    data={[
+                                                        { value: "USER", label: "USER" },
+                                                        { value: "ASSISTANT", label: "ASSISTANT" },
+                                                        { value: "SYSTEM", label: "SYSTEM" },
+                                                        { value: "DEVELOPER", label: "DEVELOPER" },
+                                                    ]}
+                                                    w={160}
+                                                    {...form.getInputProps(`inputItems.${index}.role`)}
+                                                />
+                                                <Group gap={4}>
+                                                    <Tooltip label={isItemCollapsed ? "펼치기" : "접기"} withArrow>
+                                                        <ActionIcon
+                                                            variant="subtle"
+                                                            type="button"
+                                                            aria-label={isItemCollapsed ? "Input item 펼치기" : "Input item 접기"}
+                                                            onClick={() => toggleInputItemCollapsed(index)}
+                                                        >
+                                                            {isItemCollapsed ? (
+                                                                <IconChevronRight size={16} />
+                                                            ) : (
+                                                                <IconChevronDown size={16} />
+                                                            )}
+                                                        </ActionIcon>
+                                                    </Tooltip>
+                                                    <Menu shadow="md" position="bottom-end">
+                                                        <Menu.Target>
+                                                            <ActionIcon variant="light" type="button">
+                                                                <IconDotsVertical size={16} />
+                                                            </ActionIcon>
+                                                        </Menu.Target>
+                                                        <Menu.Dropdown>
+                                                            <Menu.Item
+                                                                color="red"
+                                                                disabled={form.values.inputItems.length === 1}
+                                                                onClick={() => removeInputItem(index)}
+                                                                component="button"
+                                                                type="button"
+                                                            >
+                                                                삭제
+                                                            </Menu.Item>
+                                                        </Menu.Dropdown>
+                                                    </Menu>
+                                                </Group>
+                                            </Group>
+                                            <Collapse in={!isItemCollapsed}>
+                                                <Textarea
+                                                    label="Message"
+                                                    minRows={3}
+                                                    autosize
+                                                    value={item.message}
+                                                    onChange={(event) =>
+                                                        updateInputMessage(index, event.currentTarget.value)
+                                                    }
+                                                />
+                                            </Collapse>
+                                        </Paper>
+                                    );
+                                })}
                             </Stack>
                         </Collapse>
                     </Stack>
@@ -759,3 +829,5 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
         </>
     );
 });
+
+ExecutePanel.displayName = "ExecutePanel";

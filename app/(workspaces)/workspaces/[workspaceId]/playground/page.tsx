@@ -12,6 +12,7 @@ import { queryKeys } from "@/lib/query/keys";
 import { ExecutePanel, type ExecutePanelRef } from "@/components/playground/ExecutePanel";
 import { OutputPanel, type OutputBlock } from "@/components/playground/OutputPanel";
 import { fetchDefaultOptions, fetchWorkspace } from "@/lib/api/workspaces";
+import { useWorkspaceHeaderPageActions } from "@/components/layout/WorkspaceHeaderActionsContext";
 
 export default function PlaygroundPage() {
     const params = useParams();
@@ -210,7 +211,7 @@ export default function PlaygroundPage() {
                     // The Prompt Detail page should handle clearing it when appropriate (e.g. on Save).
                     // sessionStorage.removeItem(key); 
                 }
-            } catch (e) {
+            } catch {
                 // ignore
             }
         }
@@ -555,7 +556,43 @@ export default function PlaygroundPage() {
         if (callIdRef.current) {
             cancelMutation.mutate(callIdRef.current);
         }
-    }, []);
+    }, [cancelMutation]);
+
+    const headerActions = React.useMemo(
+        () =>
+            executeMutation.isPending ? (
+                <Button
+                    leftSection={<IconPlayerStop size={16} />}
+                    variant="light"
+                    color="red"
+                    onClick={handleStop}
+                    loading={cancelMutation.isPending}
+                >
+                    중단
+                </Button>
+            ) : (
+                <Button
+                    leftSection={<IconPlayerPlay size={16} />}
+                    type="submit"
+                    form="playground-execute-form"
+                    variant="filled"
+                    loading={refsLoading || modelsLoading || vendorsLoading || apiKeysLoading}
+                >
+                    실행
+                </Button>
+            ),
+        [
+            apiKeysLoading,
+            cancelMutation.isPending,
+            executeMutation.isPending,
+            handleStop,
+            modelsLoading,
+            refsLoading,
+            vendorsLoading,
+        ],
+    );
+
+    useWorkspaceHeaderPageActions(headerActions);
 
     if (promptsLoading) {
         return <Loader />;
@@ -572,32 +609,6 @@ export default function PlaygroundPage() {
                     <Text fw={700} size="xl">
                         Playground
                     </Text>
-                    {executeMutation.isPending ? (
-                        <Button
-                            leftSection={<IconPlayerStop size={16} />}
-                            variant="light"
-                            color="red"
-                            onClick={handleStop}
-                            loading={cancelMutation.isPending}
-                        >
-                            중단
-                        </Button>
-                    ) : (
-                        <Button
-                            leftSection={<IconPlayerPlay size={16} />}
-                            type="submit"
-                            form="playground-execute-form"
-                            variant="filled"
-                            loading={
-                                refsLoading ||
-                                modelsLoading ||
-                                vendorsLoading ||
-                                apiKeysLoading
-                            }
-                        >
-                            실행
-                        </Button>
-                    )}
                 </Group>
                 <Button
                     variant="light"

@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
     Accordion,
     Alert,
-    Anchor,
     Button,
     Group,
     Loader,
@@ -65,6 +64,7 @@ export function OutputPanel({
     // Uncontrolled with defaultValue is safer for streaming updates if keys are stable.
 
     const [openItems, setOpenItems] = React.useState<string[]>([]);
+    const blockIds = React.useMemo(() => blocks.map((b) => String(b.index)), [blocks]);
 
     React.useEffect(() => {
         // When blocks change (e.g. new item added), add it to openItems if not present
@@ -72,15 +72,14 @@ export function OutputPanel({
         // Simple strategy: Just ensure all current block IDs are in openItems whenever blocks length increases.
         // Actually, we should probably keep all open by default.
         setOpenItems((prev) => {
-            const allIds = blocks.map((b) => String(b.index));
             // Add any missing IDs (newly appeared)
-            const missing = allIds.filter(id => !prev.includes(id));
+            const missing = blockIds.filter(id => !prev.includes(id));
             if (missing.length > 0) {
                 return [...prev, ...missing];
             }
             return prev;
         });
-    }, [blocks.length]); // Only run when count changes to avoid fighting user closing it?
+    }, [blockIds]); // Only run when IDs change to avoid fighting user closing it?
     // Wait, if I collapse an item, blocks length doesn't change, so it stays collapsed.
     // If a NEW item arrives, it gets added. Current items stay as is.
     // However, if the component remounts or blocks are reset, we might want to reset?

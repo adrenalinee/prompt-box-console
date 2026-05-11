@@ -4,7 +4,6 @@ import React from "react";
 import {
     Button,
     Container,
-    Grid,
     Group,
     Paper,
     SimpleGrid,
@@ -17,14 +16,12 @@ import {
 import {
     IconArrowsDiff,
     IconBookmarks,
-    IconBrandOpenai,
     IconBriefcase,
     IconDeviceDesktopAnalytics,
     IconHistory,
     IconMessage2Code,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 
 const features = [
     {

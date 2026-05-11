@@ -138,9 +138,9 @@ export const CompactExecutePanel = React.forwardRef<CompactExecutePanelRef, Exec
     const [createRefOpen, setCreateRefOpen] = React.useState<{
         type: "TAG" | "BRANCH";
     } | null>(null);
-    const [missingModelOpen, setMissingModelOpen] = React.useState(false);
-    const [missingInputOpen, setMissingInputOpen] = React.useState(false);
-    const [optionsModalOpen, setOptionsModalOpen] = React.useState(false);
+    const [, setMissingModelOpen] = React.useState(false);
+    const [, setMissingInputOpen] = React.useState(false);
+    const [, setOptionsModalOpen] = React.useState(false);
 
     // Collapsible states
     const [instructionsOpen, { toggle: toggleInstructions }] = useDisclosure(true);
@@ -311,7 +311,7 @@ export const CompactExecutePanel = React.forwardRef<CompactExecutePanelRef, Exec
                     const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
                     sessionStorage.removeItem(key);
                 }
-            } catch (e) { }
+            } catch { }
         }
     };
 
@@ -421,7 +421,7 @@ export const CompactExecutePanel = React.forwardRef<CompactExecutePanelRef, Exec
                                 try {
                                     const key = `playground_override_${form.values.promptId}_${form.values.refId}`;
                                     sessionStorage.removeItem(key);
-                                } catch (e) { }
+                                } catch { }
 
                                 queryClient.invalidateQueries({ queryKey: queryKeys.refs(form.values.promptId) });
                                 queryClient.invalidateQueries({ queryKey: queryKeys.prompt(form.values.promptId) });
@@ -684,3 +684,5 @@ export const CompactExecutePanel = React.forwardRef<CompactExecutePanelRef, Exec
         </>
     );
 });
+
+CompactExecutePanel.displayName = "CompactExecutePanel";

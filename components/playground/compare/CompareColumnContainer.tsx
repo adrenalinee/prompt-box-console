@@ -5,13 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchRefs, fetchAdditionalInputs } from "@/lib/api/prompts";
 import { queryKeys } from "@/lib/query/keys";
 import { CompactExecutePanel, type CompactExecutePanelRef } from "./CompactExecutePanel";
-import { type OutputBlock } from "@/components/playground/OutputPanel";
 import { usePlaygroundExecution } from "../usePlaygroundExecution";
 import { OutputPanel } from "@/components/playground/OutputPanel";
 import type { Prompt } from "@/lib/api/prompts";
 import type { Model, ApiKey, Vendor } from "@/lib/api/settings";
 import type { DefaultOptions } from "@/lib/api/workspaces";
-import type { InputItemForm } from "../types";
+import type { ExecuteFormValues, InputItemForm } from "../types";
 import {Spoiler} from "@mantine/core";
 
 type CompareColumnContainerProps = {
@@ -36,7 +35,7 @@ type CompareColumnContainerProps = {
     workspaceDefaultModelId?: number;
 
     onRemove?: () => void;
-    onValuesChange?: (values: any) => void;
+    onValuesChange?: (values: ExecuteFormValues) => void;
 };
 
 export const CompareColumnContainer = React.forwardRef<CompactExecutePanelRef, CompareColumnContainerProps>(({
@@ -68,7 +67,6 @@ export const CompareColumnContainer = React.forwardRef<CompactExecutePanelRef, C
 
     const {
         execute,
-        stop, // could expose via ref if needed? Or execute implies start. Stop button in OutputPanel? No OutputPanel doesn't have stop.
         outputBlocks,
         callId,
         outputError,
@@ -124,6 +122,7 @@ export const CompareColumnContainer = React.forwardRef<CompactExecutePanelRef, C
                     workspaceDefaultModelId={workspaceDefaultModelId}
                     onExecute={(values) => execute(values)}
                     initialOverrideInstructions={initialOverrideInstructions}
+                    initialInputItems={initialInputItems}
                     onRemoveColumn={onRemove}
                     onValuesChange={onValuesChange}
                 />
@@ -141,3 +140,5 @@ export const CompareColumnContainer = React.forwardRef<CompactExecutePanelRef, C
         </div>
     );
 });
+
+CompareColumnContainer.displayName = "CompareColumnContainer";

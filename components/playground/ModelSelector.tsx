@@ -32,11 +32,9 @@ export function ModelSelector({
     selectedModelId,
     onModelChange,
     apiKeys,
-    apiKeysError,
     selectedApiKeyId,
     onApiKeyChange,
     vendors,
-    vendorsError,
     vendorId,
     onVendorChange,
     workspaceDefaultModelId,
@@ -54,7 +52,7 @@ export function ModelSelector({
     const selectedKeyLabel = selectedKey
         ? `${vendorMap.get(selectedKey.vendorId) ?? selectedKey.vendorId} / ${selectedKey.name || selectedKey.id
         }`
-        : <Text c="orange">API Key 가 선택되지 않았습니다.</Text>;
+        : "API Key 가 선택되지 않았습니다.";
 
     // Filtering logic for the modal
     const filteredModels = React.useMemo(() => {
@@ -70,8 +68,6 @@ export function ModelSelector({
     }, [models, vendorId, modelSearch]);
 
     // Fallback & Auto-selection Logic
-    const isInitializedRef = React.useRef(false);
-
     React.useEffect(() => {
         if (!models.length) return;
 
@@ -124,7 +120,7 @@ export function ModelSelector({
             onModelChange(targetModelId);
         }
 
-    }, [models, apiKeys, selectedModelId, workspaceDefaultModelId]);
+    }, [models, apiKeys, selectedModelId, selectedApiKeyId, workspaceDefaultModelId, onApiKeyChange, onModelChange]);
 
     const getErrorMessage = (error: unknown): string => {
         if (!error) return "";
@@ -146,7 +142,7 @@ export function ModelSelector({
                 >
                     {selectedModel ? `모델: ${selectedModel.name || selectedModel.modelKey}` : "모델 선택"}
                 </Button>
-                <Text size="xs" c="dimmed" lineClamp={2}>
+                <Text size="xs" c={selectedKey ? "dimmed" : "orange"} lineClamp={2}>
                     {selectedKeyLabel}
                 </Text>
             </Group>

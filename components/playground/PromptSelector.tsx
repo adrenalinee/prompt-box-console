@@ -2,7 +2,6 @@
 
 import React from "react";
 import { ActionIcon, Badge, Button, Group, Menu, Modal, ScrollArea, Stack, Table, Text, TextInput, Tooltip } from "@mantine/core";
-import { useForm } from "@mantine/form";
 import { IconDotsVertical, IconFileText, IconGitBranch, IconSearch } from "@tabler/icons-react";
 import type { Prompt, PromptRef } from "@/lib/api/prompts";
 
@@ -35,11 +34,8 @@ type PromptSelectorProps = {
 
 export function PromptSelector({
     prompts,
-    promptsError,
     selectedPromptId,
-    onPromptChange,
     refs,
-    refsError,
     selectedRefId,
     onRefChange,
     isModified,

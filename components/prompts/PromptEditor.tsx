@@ -34,6 +34,7 @@ export function PromptEditor({
 
     React.useEffect(() => {
         form.setValues({ instructions: initialInstructions });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialInstructions]);
 
     return (

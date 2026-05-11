@@ -12,7 +12,6 @@ import {
     IconKey,
     IconDatabase,
     IconBuildingStore,
-    IconAdjustments,
     IconBriefcase,
 } from "@tabler/icons-react";
 

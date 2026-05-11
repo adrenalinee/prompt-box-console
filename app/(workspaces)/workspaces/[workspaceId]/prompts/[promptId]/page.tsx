@@ -223,6 +223,7 @@ export default function PromptDetailPage() {
                 description: prompt.description ?? "",
             });
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [prompt, promptEditOpen]);
 
     React.useEffect(() => {
@@ -242,12 +243,13 @@ export default function PromptDetailPage() {
                 if (draft !== null) {
                     nextInstructions = draft;
                 }
-            } catch (e) {
+            } catch {
                 // ignore
             }
             setCurrentInstructions(nextInstructions);
             setLoadedRefId(selectedRef.id);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedRef?.id, selectedRef?.instructions, refEditOpen]);
 
     React.useEffect(() => {
@@ -270,7 +272,7 @@ export default function PromptDetailPage() {
             try {
                 const key = `playground_override_${promptId}_${variables.refId}`;
                 sessionStorage.removeItem(key);
-            } catch (e) {
+            } catch {
                 // ignore
             }
         },
@@ -519,7 +521,7 @@ export default function PromptDetailPage() {
                                             try {
                                                 const key = `playground_override_${promptId}_${selectedRef.id}`;
                                                 sessionStorage.setItem(key, currentInstructions);
-                                            } catch (e) {
+                                            } catch {
                                                 // ignore
                                             }
                                             router.push(
@@ -596,7 +598,7 @@ export default function PromptDetailPage() {
                                                 try {
                                                     const key = `playground_override_${promptId}_${selectedRef.id}`;
                                                     sessionStorage.removeItem(key);
-                                                } catch (e) { }
+                                                } catch { }
                                                 setCurrentInstructions(selectedRef.instructions);
                                             }
                                         }}

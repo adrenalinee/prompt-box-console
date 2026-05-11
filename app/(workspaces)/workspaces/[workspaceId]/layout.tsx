@@ -6,6 +6,10 @@ import { IconMenu2, IconMessage2Code } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { AppShellNav } from "@/components/layout/AppShellNav";
 import { HeaderActions } from "@/components/layout/HeaderActions";
+import {
+    WorkspaceHeaderActionsProvider,
+    WorkspaceHeaderPageActionsSlot,
+} from "@/components/layout/WorkspaceHeaderActionsContext";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWorkspaces } from "@/lib/api/workspaces";
 import { queryKeys } from "@/lib/query/keys";
@@ -36,61 +40,64 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const currentWorkspace = workspaces.find((workspace) => workspace.id === workspaceId);
 
     return (
-        <AppShell
-            header={{ height: 60 }}
-            navbar={{
-                width: 240,
-                breakpoint: "sm",
-                collapsed: { mobile: !opened, desktop: !desktopOpened },
-            }}
-            padding="md"
-        >
-            <AppShell.Header>
-                <Group h="100%" px="md" justify="space-between">
-                    <Group gap="sm">
-                        <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-                        <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }} className="hover:opacity-80">
-                            <Group gap={6}>
-                                <IconMessage2Code size={22} stroke={1.8} />
-                                <Text fw={700}>PromptBox</Text>
-                            </Group>
-                        </Link>
-                        <Tooltip label="워크스페이스">
-                            <Select
-                                data={workspaceOptions}
-                                value={workspaceId}
-                                onChange={(value) => {
-                                    if (value) {
-                                        router.push(`/workspaces/${value}/playground`);
-                                    }
-                                }}
-                                placeholder={isLoading ? "Workspace 로딩..." : "Workspace 선택"}
-                                size="xs"
-                                w={200}
-                            />
-                        </Tooltip>
-                        <Tooltip label="사이드 메뉴 열고 닫기">
-                            <ActionIcon variant="subtle" onClick={toggleDesktop} visibleFrom="sm" size="input-sm" color="gray">
-                                <IconMenu2 size={18} />
-                            </ActionIcon>
-                        </Tooltip>
+        <WorkspaceHeaderActionsProvider>
+            <AppShell
+                header={{ height: 60 }}
+                navbar={{
+                    width: 240,
+                    breakpoint: "sm",
+                    collapsed: { mobile: !opened, desktop: !desktopOpened },
+                }}
+                padding="md"
+            >
+                <AppShell.Header>
+                    <Group h="100%" px="md" justify="space-between">
+                        <Group gap="sm">
+                            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+                            <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }} className="hover:opacity-80">
+                                <Group gap={6}>
+                                    <IconMessage2Code size={22} stroke={1.8} />
+                                    <Text fw={700}>PromptBox</Text>
+                                </Group>
+                            </Link>
+                            <Tooltip label="워크스페이스">
+                                <Select
+                                    data={workspaceOptions}
+                                    value={workspaceId}
+                                    onChange={(value) => {
+                                        if (value) {
+                                            router.push(`/workspaces/${value}/playground`);
+                                        }
+                                    }}
+                                    placeholder={isLoading ? "Workspace 로딩..." : "Workspace 선택"}
+                                    size="xs"
+                                    w={200}
+                                />
+                            </Tooltip>
+                            <Tooltip label="사이드 메뉴 열고 닫기">
+                                <ActionIcon variant="subtle" onClick={toggleDesktop} visibleFrom="sm" size="input-sm" color="gray">
+                                    <IconMenu2 size={18} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <WorkspaceHeaderPageActionsSlot />
+                        </Group>
+                        <HeaderActions workspaceId={workspaceId} />
                     </Group>
-                    <HeaderActions workspaceId={workspaceId} />
-                </Group>
-            </AppShell.Header>
-            <AppShell.Navbar>
-                <AppShellNav workspaceId={workspaceId} />
-            </AppShell.Navbar>
-            <AppShell.Main>
-                <Box>
-                    {!isLoading && !isError && !currentWorkspace && (
-                        <Text c="dimmed" mb="sm">
-                            워크스페이스 목록에 없는 ID입니다. 그래도 페이지는 표시됩니다.
-                        </Text>
-                    )}
-                    {children}
-                </Box>
-            </AppShell.Main>
-        </AppShell>
+                </AppShell.Header>
+                <AppShell.Navbar>
+                    <AppShellNav workspaceId={workspaceId} />
+                </AppShell.Navbar>
+                <AppShell.Main>
+                    <Box>
+                        {!isLoading && !isError && !currentWorkspace && (
+                            <Text c="dimmed" mb="sm">
+                                워크스페이스 목록에 없는 ID입니다. 그래도 페이지는 표시됩니다.
+                            </Text>
+                        )}
+                        {children}
+                    </Box>
+                </AppShell.Main>
+            </AppShell>
+        </WorkspaceHeaderActionsProvider>
     );
 }

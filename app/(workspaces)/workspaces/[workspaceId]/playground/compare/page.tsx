@@ -13,9 +13,10 @@ import { queryKeys } from "@/lib/query/keys";
 export default function ComparePage() {
     const params = useParams();
     const workspaceId = params?.workspaceId as string;
+    type CompareInitialState = React.ComponentProps<typeof CompareSessionManager>["initialSessionState"];
 
     // Load Initial State from Session Storage if available
-    const [initialState, setInitialState] = React.useState<any>(null);
+    const [initialState, setInitialState] = React.useState<CompareInitialState>(null);
     React.useEffect(() => {
         try {
             const stored = sessionStorage.getItem("compare_init_state");

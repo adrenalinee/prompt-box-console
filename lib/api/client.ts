@@ -1,5 +1,5 @@
 import { showNotification } from "@mantine/notifications";
-import {getApiBaseUrl, getInitServerPhase} from "@/config/app-config";
+import {getApiBaseUrl} from "@/config/app-config";
 import { getSession, signOut } from "next-auth/react";
 
 export type ApiError = {

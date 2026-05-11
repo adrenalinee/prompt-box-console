@@ -1,5 +1,5 @@
 import {getInitServerPhase} from "@/config/app-config";
-import {Badge, Text, Tooltip} from "@mantine/core";
+import {Badge, Tooltip} from "@mantine/core";
 import React from "react";
 
 

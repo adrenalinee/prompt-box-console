@@ -335,7 +335,7 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
         if (callIdRef.current) {
             cancelMutation.mutate(callIdRef.current);
         }
-    }, []);
+    }, [cancelMutation]);
 
     return {
         outputBlocks,

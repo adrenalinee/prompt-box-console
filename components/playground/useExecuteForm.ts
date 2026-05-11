@@ -1,7 +1,7 @@
 import React from "react";
 import { useForm } from "@mantine/form";
 import type { ExecuteFormValues, InputItemForm } from "./types";
-import type { AdditionalInputItem, Prompt, PromptRef } from "@/lib/api/prompts";
+import type { AdditionalInputItem, PromptRef } from "@/lib/api/prompts";
 import type { DefaultOptions } from "@/lib/api/workspaces";
 
 type UseExecuteFormProps = {
@@ -65,24 +65,29 @@ export function useExecuteForm({
         if (initialPromptId !== undefined && initialPromptId !== form.values.promptId) {
             form.setFieldValue("promptId", initialPromptId);
         }
+        // Mantine form object is not a safe effect dependency here; sync only from the external prop.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialPromptId]);
 
     React.useEffect(() => {
         if (initialRefId !== undefined && initialRefId !== form.values.refId) {
             form.setFieldValue("refId", initialRefId);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialRefId]);
 
     React.useEffect(() => {
         if (initialModelId !== undefined && initialModelId !== form.values.modelId) {
             form.setFieldValue("modelId", initialModelId);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialModelId]);
 
     React.useEffect(() => {
         if (initialApiKeyId !== undefined && initialApiKeyId !== form.values.apiKeyId) {
             form.setFieldValue("apiKeyId", initialApiKeyId);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialApiKeyId]);
 
 
@@ -160,7 +165,8 @@ export function useExecuteForm({
 
         setRefBaselineInstructions(serverInstructions);
         lastRefIdRef.current = currentRefId;
-    }, [selectedRef?.id, selectedRef?.instructions, initialOverrideInstructions]); // Removed unnecessary deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedRef?.id, selectedRef?.instructions, initialOverrideInstructions]);
 
     // Sync additional Inputs when Ref changes
     React.useEffect(() => {
@@ -177,6 +183,7 @@ export function useExecuteForm({
             form.setFieldValue("inputItems", normalizeInputItems(defaultItems));
             setRefBaselineInputs([]);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [form.values.refId, additionalInputs, normalizeInputItems]);
 
     // Input normalization effect
@@ -193,6 +200,7 @@ export function useExecuteForm({
         if (!isSame) {
             form.setFieldValue("inputItems", normalized);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [form.values.inputItems, normalizeInputItems]);
 
     // Default Options logic
@@ -218,6 +226,7 @@ export function useExecuteForm({
         form.setFieldValue("overrideOptions.effort", defaultOptions?.effort ?? fallback.effort);
         form.setFieldValue("overrideOptions.verbosity", defaultOptions?.verbosity ?? fallback.verbosity);
         form.setFieldValue("overrideOptions.summary", defaultOptions?.summary ?? fallback.summary);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [defaultOptions]);
 
     const effectiveInputItems = React.useMemo(

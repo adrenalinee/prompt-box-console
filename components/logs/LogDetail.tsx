@@ -34,7 +34,7 @@ export function LogDetail({ log }: LogDetailProps) {
         }
     }
 
-    const renderItemBox = (item: any) => {
+    const renderItemBox = (item: Record<string, unknown> & { id?: string | number }) => {
         const entries = Object.entries(item);
         // Sort entries to put id/position first, then others, then long text fields last
         const sortedEntries = entries.sort(([keyA], [keyB]) => {
@@ -55,7 +55,7 @@ export function LogDetail({ log }: LogDetailProps) {
         });
 
         return (
-            <Paper key={item.id} p="sm" withBorder bg="gray.0">
+            <Paper key={item.id ?? JSON.stringify(item)} p="sm" withBorder bg="gray.0">
                 <Stack gap="xs">
                     {sortedEntries.map(([key, value]) => {
                         if (key === "parts" && Array.isArray(value)) {
@@ -65,11 +65,14 @@ export function LogDetail({ log }: LogDetailProps) {
                                         Parts:
                                     </Text>
                                     <Stack gap="xs">
-                                        {value.map((part: any, index: number) => (
+                                        {value.map((part, index: number) => {
+                                            const outputPart = part as { part?: unknown; text?: unknown };
+
+                                            return (
                                             <Paper key={index} p="xs" withBorder bg="white">
                                                 <Group justify="space-between" mb={4}>
                                                     <Text size="xs" fw={700} c="dimmed">
-                                                        {part.part}
+                                                        {String(outputPart.part ?? "")}
                                                     </Text>
                                                 </Group>
                                                 <Text
@@ -80,10 +83,11 @@ export function LogDetail({ log }: LogDetailProps) {
                                                     }}
                                                     size="sm"
                                                 >
-                                                    {part.text}
+                                                    {String(outputPart.text ?? "")}
                                                 </Text>
                                             </Paper>
-                                        ))}
+                                            );
+                                        })}
                                     </Stack>
                                 </Stack>
                             );
