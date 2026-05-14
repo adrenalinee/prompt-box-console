@@ -100,7 +100,7 @@ mostprompt-web/
 │   └── query/                   # TanStack Query keys
 ├── types/                       # 전역 TypeScript 타입 정의
 ├── auth.ts                      # next-auth 설정
-├── middleware.ts                # 인증 미들웨어
+├── proxy.ts                     # 인증 프록시 (기존 미들웨어)
 └── .env.local                   # 로컬 환경변수 (gitignore)
 ```
 
