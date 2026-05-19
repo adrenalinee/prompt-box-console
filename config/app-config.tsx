@@ -19,7 +19,7 @@ export function getApiBaseUrl() {
     if (serverPhase == "dev") {
         return "https://prompt-box-server-dev-245695755093.asia-northeast3.run.app";
     } else if (serverPhase == "local") {
-        return "http://localhost:8080";
+        return "http://localhost:7070";
     } else {
         throw Error("정의되지 않은 serverPhase 입니다. serverPhase: " + serverPhase);
     }
