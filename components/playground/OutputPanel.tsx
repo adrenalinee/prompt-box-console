@@ -24,7 +24,7 @@ export type OutputContentPart = {
 
 export type OutputBlock = {
     index: number;
-    kind: "message" | "reasoning";
+    kind: "message" | "reasoning" | "function";
     parts: OutputContentPart[];
 };
 
@@ -139,8 +139,8 @@ export function OutputPanel({
                                 <Accordion.Item key={block.index} value={String(block.index)}>
                                     <Accordion.Control>
                                         <Group justify="space-between" pr="sm">
-                                            <Text fw={600} style={{ textTransform: "capitalize" }}>
-                                                {block.kind}
+                                            <Text fw={600}>
+                                                {block.kind === "function" ? "function call" : block.kind}
                                             </Text>
                                             {/* Maybe show total duration if we calculate it? */}
                                         </Group>
@@ -149,15 +149,20 @@ export function OutputPanel({
                                         <Stack gap="sm">
                                             {validParts.map((part) => {
                                                 const partKey = `${block.index}-${part.part}`;
-                                                const timingText = `first delta ${formatMs(
-                                                    part.firstDeltaMs,
-                                                )} · done ${formatMs(part.doneMs)}`;
+                                                const timingText =
+                                                    block.kind === "function"
+                                                        ? `observed ${formatMs(part.doneMs ?? part.firstDeltaMs)}`
+                                                        : `first delta ${formatMs(
+                                                            part.firstDeltaMs,
+                                                        )} · done ${formatMs(part.doneMs)}`;
 
                                                 let label: string = part.part;
                                                 if (block.kind === "reasoning") {
                                                     label = part.part.startsWith("summary-")
                                                         ? "Reasoning Summary"
                                                         : "Reasoning Process";
+                                                } else if (block.kind === "function") {
+                                                    label = "Function Call";
                                                 } else {
                                                     label = "Message Content";
                                                 }

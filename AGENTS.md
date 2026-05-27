@@ -24,15 +24,13 @@
 ## API 서버
 
 ```
-Base URL:  http://localhost:8080
-API Spec:  http://localhost:8080/api-docs
-Swagger:   http://localhost:8080/swagger-ui
+API Spec:  http://localhost:7070/api-docs
 ```
 
 ### 환경 설정
 
 - `SERVER_PHASE` 환경변수로 API URL이 결정됩니다 (`config/app-config.tsx`).
-  - `local` → `http://localhost:8080`
+  - `local` → `http://localhost:7070`
   - `dev` → GCP Cloud Run (dev 서버)
 - `.env.local`의 `SERVER_PHASE=local` 값을 확인하세요.
 
@@ -180,7 +178,7 @@ React.useEffect(() => {
 ## 코딩 컨벤션
 
 - **API 호출**: 반드시 `lib/api/` 내의 함수를 사용하고, `apiFetch`를 직접 호출하지 않습니다.
-- **새 API 엔드포인트 연동**: API 스펙은 `http://localhost:8080/api-docs` 또는 Swagger UI에서 확인합니다.
+- **새 API 엔드포인트 연동**: API 스펙은 `http://localhost:7070/api-docs` 또는 Swagger UI에서 확인합니다.
 - **데이터 패칭**: TanStack Query (`useQuery`, `useMutation`)를 사용합니다. Query key는 `lib/query/keys.ts`에서 관리합니다.
 - **UI 컴포넌트**: Mantine v8 컴포넌트를 우선 사용합니다. 아이콘은 `@tabler/icons-react`를 사용합니다.
 - **에러/알림**: `@mantine/notifications`의 `showNotification()`을 사용합니다.

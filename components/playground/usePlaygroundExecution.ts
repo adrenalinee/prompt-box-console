@@ -7,6 +7,68 @@ type UsePlaygroundExecutionProps = {
     workspaceId: string;
 };
 
+type OutputKind = OutputBlock["kind"];
+
+type OutputPartState = {
+    text: string;
+    firstDeltaAt?: number;
+    doneAt?: number;
+};
+
+type OutputItemState = {
+    kind: OutputKind;
+    parts: Map<string, OutputPartState>;
+};
+
+type OutputItemsState = {
+    idToIndex: Map<string, number>;
+    indexToItem: Map<number, OutputItemState>;
+    nextIndex: number;
+    functionCallCount: number;
+};
+
+type FunctionCallDoneEvent = Extract<LlmStreamEvent, { type: "response.function_call.done" }>;
+
+function formatJsonLike(value?: unknown) {
+    if (value === undefined || value === null) return "";
+    if (typeof value !== "string") {
+        return JSON.stringify(value, null, 2);
+    }
+    if (!value) return "";
+    try {
+        return JSON.stringify(JSON.parse(value), null, 2);
+    } catch {
+        return value;
+    }
+}
+
+function formatFunctionCall(event: FunctionCallDoneEvent) {
+    const lines = [`Tool: ${event.toolName}`];
+    if (event.callId) lines.push(`Call ID: ${event.callId}`);
+    if (event.sequence !== undefined && event.sequence !== null) lines.push(`Sequence: ${event.sequence}`);
+    if (event.delivery) lines.push(`Delivery: ${event.delivery}`);
+    if (event.argumentsJson !== undefined && event.argumentsJson !== null) {
+        lines.push("", "Arguments:", formatJsonLike(event.argumentsJson));
+    }
+    if (event.output !== undefined && event.output !== null) {
+        lines.push("", "Output:", formatJsonLike(event.output));
+    }
+    if (event.errorMessage) {
+        lines.push("", "Error:", event.errorMessage);
+    }
+    return lines.join("\n");
+}
+
+function nextFunctionIndex(state: OutputItemsState) {
+    const outputIndexes = Array.from(state.indexToItem.entries())
+        .filter(([, item]) => item.kind !== "function")
+        .map(([index]) => index);
+    const latestOutputIndex = outputIndexes.length ? Math.max(...outputIndexes) : -1;
+    const index = latestOutputIndex + 0.5 + state.functionCallCount / 1000;
+    state.functionCallCount += 1;
+    return index;
+}
+
 export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionProps) {
     const [outputBlocks, setOutputBlocks] = React.useState<OutputBlock[]>([]);
     const [callId, setCallId] = React.useState<string>("");
@@ -15,27 +77,11 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
 
     const callIdRef = React.useRef<string>("");
     const requestStartedAtRef = React.useRef<number>(0);
-    const outputItemsRef = React.useRef<{
-        idToIndex: Map<string, number>;
-        indexToItem: Map<
-            number,
-            {
-                kind: "message" | "reasoning";
-                parts: Map<
-                    string,
-                    {
-                        text: string;
-                        firstDeltaAt?: number;
-                        doneAt?: number;
-                    }
-                >;
-            }
-        >;
-        nextIndex: number;
-    }>({
+    const outputItemsRef = React.useRef<OutputItemsState>({
         idToIndex: new Map(),
         indexToItem: new Map(),
         nextIndex: 0,
+        functionCallCount: 0,
     });
 
     const resetOutputState = React.useCallback(() => {
@@ -43,6 +89,7 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
             idToIndex: new Map(),
             indexToItem: new Map(),
             nextIndex: 0,
+            functionCallCount: 0,
         };
         requestStartedAtRef.current = Date.now();
         setOutputBlocks([]);
@@ -53,7 +100,7 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
     }, []);
 
     const ensureIndexForId = React.useCallback(
-        (id?: string, index?: number, kind: "message" | "reasoning" = "message") => {
+        (id?: string, index?: number | null, kind: OutputKind = "message") => {
             const state = outputItemsRef.current;
             if (!id) {
                 if (typeof index === "number") {
@@ -99,6 +146,7 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
                 const getPriority = (key: string) => {
                     if (key.startsWith("summary-")) return 1;
                     if (key.startsWith("part-")) return 2;
+                    if (key.startsWith("function-")) return 3;
                     return 3;
                 };
 
@@ -143,6 +191,8 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
                 effort?: string;
                 verbosity?: string;
                 summary?: string;
+                topK?: number;
+                includeThoughts?: boolean;
             };
         }) => {
             resetOutputState();
@@ -163,8 +213,24 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
                             setCallId(event.logId);
                             return;
                         }
-                        if (event.type === "response.created") {
-
+                        if (event.type === "response.function_call.done") {
+                            const state = outputItemsRef.current;
+                            const index = nextFunctionIndex(state);
+                            const now = Date.now();
+                            state.indexToItem.set(index, {
+                                kind: "function",
+                                parts: new Map([
+                                    [
+                                        `function-${state.functionCallCount}`,
+                                        {
+                                            text: formatFunctionCall(event),
+                                            firstDeltaAt: now,
+                                            doneAt: now,
+                                        },
+                                    ],
+                                ]),
+                            });
+                            rebuildOutputBlocks();
                         }
 
                         if (event.type === "response.message.added") {
@@ -248,7 +314,7 @@ export function usePlaygroundExecution({ workspaceId }: UsePlaygroundExecutionPr
                                 if (item) {
                                     const partKey = `part-${event.partIndex}`;
                                     const part = item.parts.get(partKey) || { text: "" };
-                                    part.text = event.text;
+                                    part.text = event.text ?? part.text;
                                     part.doneAt = Date.now();
                                     item.parts.set(partKey, part);
                                     rebuildOutputBlocks();

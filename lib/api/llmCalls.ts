@@ -18,6 +18,8 @@ export type ExecutePayload = {
     overrideOptions?: {
         temperature?: number;
         topP?: number;
+        topK?: number;
+        includeThoughts?: boolean;
         maxTokens?: number;
         textFormat?: string;
         effort?: string;
@@ -31,29 +33,29 @@ export type ExecuteResult = {
 };
 
 export type LlmStreamEvent =
-    | { type: "log.created"; logId: string; createdAt: string }
-    | { type: "response.created"; id: string; sequence: number; model: string }
+    | { type: "log.created"; logId: string; createdAt?: string | null }
+    | { type: "response.created"; id: string; sequence: number; model?: string | null }
     | { type: "response.message.added"; itemId: string; sequence: number; itemIndex: number }
     | {
         type: "response.message.content_part.added";
         itemId: string;
-        sequence: number;
-        itemIndex: number;
+        sequence?: number | null;
+        itemIndex?: number | null;
         partIndex: number;
     }
     | {
         type: "response.message.content_part.done";
         itemId: string;
-        sequence: number;
-        itemIndex: number;
+        sequence?: number | null;
+        itemIndex?: number | null;
         partIndex: number;
-        text: string;
+        text?: string | null;
     }
     | {
         type: "response.message.delta";
         itemId: string;
-        sequence: number;
-        itemIndex: number;
+        sequence?: number | null;
+        itemIndex?: number | null;
         partIndex: number;
         delta: string;
     }
@@ -84,6 +86,16 @@ export type LlmStreamEvent =
     }
     | { type: "response.reasoning.done"; itemId: string; sequence: number; itemIndex: number }
     | {
+        type: "response.function_call.done";
+        callId?: string | null;
+        toolName: string;
+        sequence?: number | null;
+        argumentsJson?: string | null;
+        output?: string | null;
+        delivery?: "TO_MODEL" | "RETURN_DIRECT" | null;
+        errorMessage?: string | null;
+    }
+    | {
         type: "response.completed";
         id: string;
         sequence: number;
@@ -109,7 +121,7 @@ export type CallLog = {
     createdAt?: string;
     instructionsPreview?: string;
     elapsed?: number;
-    status?: "PENDING" | "RUNNING" | "SUCCESS" | "ERROR" | "TIMEOUT" | "CANCELLED";
+    status?: "PENDING" | "RUNNING" | "CANCEL_REQUESTED" | "SUCCESS" | "ERROR" | "TIMEOUT" | "CANCELLED";
     errorCode?: string;
     errorMessage?: string;
     llmCallOptions?: string;
@@ -299,6 +311,7 @@ export async function executeCallStream(
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
+        buffer = buffer.replace(/\r\n/g, "\n");
         let separatorIndex = buffer.indexOf("\n\n");
         while (separatorIndex !== -1) {
             const chunk = buffer.slice(0, separatorIndex);
