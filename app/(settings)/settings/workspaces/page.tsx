@@ -147,7 +147,7 @@ function WorkspacesContent() {
             textFormat?: string;
             effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
             verbosity?: "LOW" | "MEDIUM" | "HIGH";
-            summary?: "AUTO" | "CONCISE" | "DETAILED";
+            summary?: "NONE" | "AUTO" | "CONCISE" | "DETAILED";
         }) => upsertDefaultOptions(defaultOptionsTarget?.id || "", values),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
@@ -402,7 +402,7 @@ function WorkspacesContent() {
                             textFormat: values.textFormat.trim() || undefined,
                             effort: (values.effort as "DEFAULT" | "LOW" | "MEDIUM" | "HIGH") || undefined,
                             verbosity: (values.verbosity as "LOW" | "MEDIUM" | "HIGH") || undefined,
-                            summary: (values.summary as "AUTO" | "CONCISE" | "DETAILED") || undefined,
+                            summary: (values.summary as "NONE" | "AUTO" | "CONCISE" | "DETAILED") || undefined,
                         });
                     })}
                 >
@@ -458,6 +458,7 @@ function WorkspacesContent() {
                         <Select
                             label="summary"
                             data={[
+                                { value: "NONE", label: "NONE" },
                                 { value: "AUTO", label: "AUTO" },
                                 { value: "CONCISE", label: "CONCISE" },
                                 { value: "DETAILED", label: "DETAILED" },

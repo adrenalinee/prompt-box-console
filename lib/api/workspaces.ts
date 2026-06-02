@@ -17,7 +17,7 @@ export type DefaultOptions = {
     textFormat?: string;
     effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
     verbosity?: "LOW" | "MEDIUM" | "HIGH";
-    summary?: "AUTO" | "CONCISE" | "DETAILED";
+    summary?: "NONE" | "AUTO" | "CONCISE" | "DETAILED";
 };
 
 export type WorkspaceDetail = Workspace & {

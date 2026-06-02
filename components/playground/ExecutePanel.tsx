@@ -812,6 +812,7 @@ export const ExecutePanel = React.forwardRef<ExecutePanelRef, ExecutePanelProps>
                     <Select
                         label="summary"
                         data={[
+                            { value: "NONE", label: "NONE" },
                             { value: "AUTO", label: "AUTO" },
                             { value: "CONCISE", label: "CONCISE" },
                             { value: "DETAILED", label: "DETAILED" },

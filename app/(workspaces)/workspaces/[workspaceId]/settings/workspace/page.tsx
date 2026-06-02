@@ -158,7 +158,7 @@ export default function WorkspaceSettingsPage() {
             textFormat?: string;
             effort?: "DEFAULT" | "LOW" | "MEDIUM" | "HIGH";
             verbosity?: "LOW" | "MEDIUM" | "HIGH";
-            summary?: "AUTO" | "CONCISE" | "DETAILED";
+            summary?: "NONE" | "AUTO" | "CONCISE" | "DETAILED";
         }) => upsertDefaultOptions(workspaceId, values),
         onSuccess: () => {
             queryClient.invalidateQueries({
@@ -276,7 +276,7 @@ export default function WorkspaceSettingsPage() {
                                 textFormat: values.textFormat.trim() || undefined,
                                 effort: (values.effort || undefined) as "DEFAULT" | "LOW" | "MEDIUM" | "HIGH" | undefined,
                                 verbosity: (values.verbosity || undefined) as "LOW" | "MEDIUM" | "HIGH" | undefined,
-                                summary: (values.summary || undefined) as "AUTO" | "CONCISE" | "DETAILED" | undefined,
+                                summary: (values.summary || undefined) as "NONE" | "NONE" | "AUTO" | "CONCISE" | "DETAILED" | undefined,
                             });
                         })}
                     >
@@ -361,6 +361,7 @@ export default function WorkspaceSettingsPage() {
                             <Select
                                 label="summary"
                                 data={[
+                                    { value: "NONE", label: "NONE" },
                                     { value: "AUTO", label: "AUTO" },
                                     { value: "CONCISE", label: "CONCISE" },
                                     { value: "DETAILED", label: "DETAILED" },
