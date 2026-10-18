@@ -1,7 +1,20 @@
 "use client";
 
 import React from "react";
-import { ActionIcon, Button, Group, Modal, Stack, Text, Alert, TextInput, ScrollArea, Table, Select } from "@mantine/core";
+import {
+    ActionIcon,
+    Button,
+    Group,
+    Modal,
+    Stack,
+    Text,
+    Alert,
+    TextInput,
+    ScrollArea,
+    Table,
+    Select,
+    Anchor
+} from "@mantine/core";
 import { IconAdjustments, IconSearch, IconServer } from "@tabler/icons-react";
 import type { ApiKey, Model, Vendor } from "@/lib/api/settings";
 
@@ -159,7 +172,8 @@ export function ModelSelector({
                 <Stack>
                     {apiKeys.length === 0 && (
                         <Alert color="red" title="API Key 필요">
-                            등록된 API Key가 없습니다. 설정 페이지에서 API Key를 먼저 등록해주세요.
+                            등록된 API Key가 없습니다. 워크스페이스 설정 페이지에서 API Key를 먼저 등록해주세요.
+                            &nbsp;<Anchor href="settings/api-keys">API Key 등록</Anchor>
                         </Alert>
                     )}
                     {!!modelsError && (

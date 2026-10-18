@@ -19,12 +19,14 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { IconMessage2Code, IconSettings } from "@tabler/icons-react";
+import { IconDatabasePlus, IconMessage2Code, IconSettings } from "@tabler/icons-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchWorkspaces, createWorkspace } from "@/lib/api/workspaces";
+import { initDevData } from "@/lib/api/dev";
 import { queryKeys } from "@/lib/query/keys";
+import { getInitServerPhase } from "@/config/app-config";
 import { UserProfileMenu } from "@/components/auth/UserProfileMenu";
 import { useSession } from "next-auth/react";
 import ServerPhase from "@/components/layout/ServerPhase";
@@ -91,6 +93,20 @@ export default function RootPage() {
                 message: "워크스페이스 생성에 실패했습니다.",
                 color: "red",
             });
+        },
+    });
+
+    const isLocalPhase = getInitServerPhase() === "local";
+
+    const { mutate: doSeedInitialData, isPending: isSeeding } = useMutation({
+        mutationFn: initDevData,
+        onSuccess: () => {
+            notifications.show({
+                title: "초기 데이터 생성 완료",
+                message: "로컬 개발용 기본 데이터가 생성되었습니다.",
+                color: "green",
+            });
+            queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
         },
     });
 
@@ -167,6 +183,18 @@ export default function RootPage() {
                                                     <IconSettings size={18} />
                                                 </ActionIcon>
                                             </Tooltip>
+                                            {isLocalPhase && (
+                                                <Tooltip label="로컬 개발용 기본 데이터를 생성합니다.">
+                                                    <Button
+                                                        variant="light"
+                                                        leftSection={<IconDatabasePlus size={16} />}
+                                                        onClick={() => doSeedInitialData()}
+                                                        loading={isSeeding}
+                                                    >
+                                                        초기 데이터 생성
+                                                    </Button>
+                                                </Tooltip>
+                                            )}
                                         </Group>
                                     )}
                                 </Stack>

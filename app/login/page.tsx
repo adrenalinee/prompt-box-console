@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import { Center, Loader } from "@mantine/core";
-import { auth } from "@/auth";
+import { auth, isLocalDevLoginEnabled } from "@/auth";
 import { redirect } from "next/navigation";
 import LoginCard from "./LoginCard";
 
@@ -13,7 +13,7 @@ export default async function LoginPage() {
     return (
         <Center h="100vh" p="md">
             <Suspense fallback={<Loader />}>
-                <LoginCard />
+                <LoginCard localDevLoginEnabled={isLocalDevLoginEnabled} />
             </Suspense>
         </Center>
     );
